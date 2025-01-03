@@ -4,6 +4,8 @@ from tkinter import *
 from tkinter.messagebox import showinfo, showerror
 from datetime import datetime, date
 
+import tk
+
 
 class BusBookingSystem:
     def __init__(self):
@@ -25,10 +27,14 @@ class BusBookingSystem:
         self.bus_image = PhotoImage(file=r'C:/Users/ratho/OneDrive/Documents/Bus-Booking-system-main/Bus-Booking-system-main/Bus_Booking/Bus_for_project.png')
         h, w = root.winfo_screenheight(), root.winfo_screenwidth()
         root.geometry(f'{w}x{h}+0+0')
-        Label(root, text="\n\n\n\n").grid(row=0, column=0)
-        Label(root, image=self.bus_image).grid(row=1, column=1, columnspan=12)
+        for i in range (15):
+         root.grid_rowconfigure(i, weight=1)
+         root.grid_columnconfigure(i ,weight=1)
+
+        Label(root, text="\n\n\n\n").grid(row=0, column=0, columnspan=15)
+        Label(root, image=self.bus_image).grid(row=1, column=0, columnspan=15,sticky="nsew")
         Label(root, text="Online Bus Booking System", font='Arial 20 bold', bg='yellow', fg='black').grid(
-            row=2, column=2, columnspan=9)
+            row=2, column=0, columnspan=15,sticky="nsew")
 
         def home_to_journey_detail():
             root.destroy()

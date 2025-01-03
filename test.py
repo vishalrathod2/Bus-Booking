@@ -1,3 +1,4 @@
+from logging import root
 import sqlite3
 from tkinter import *
 from tkinter.messagebox import showinfo, showerror

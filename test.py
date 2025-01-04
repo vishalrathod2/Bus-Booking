@@ -5,6 +5,75 @@ from tkinter.messagebox import showinfo, showerror
 from datetime import datetime, date
 
 import tk
+def initialize_db():
+    conn = sqlite3.connect("bus_booking.db")
+    cursor = conn.cursor()
+
+    # Create operator table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS operator (
+            opr_id VARCHAR(255) PRIMARY KEY,
+            name VARCHAR(255),
+            address VARCHAR(255),
+            phone CHAR(10),
+            email VARCHAR(255)
+        )
+    ''')
+
+    # Create route table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS route (
+            r_id VARCHAR(255) PRIMARY KEY,
+            s_name VARCHAR(255),
+            s_id VARCHAR(255),
+            e_name VARCHAR(255),
+            e_id VARCHAR(255)
+        )
+    ''')
+
+    # Create bus table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bus (
+            bus_id VARCHAR(255) PRIMARY KEY,
+            bus_type VARCHAR(255),
+            capacity INT,
+            fair INT,
+            op_id VARCHAR(255) NOT NULL,
+            route_id VARCHAR(255) NOT NULL,
+            FOREIGN KEY (op_id) REFERENCES operator (opr_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (route_id) REFERENCES route (r_id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    ''')
+
+    # Create running table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS running (
+            b_id VARCHAR(255),
+            run_date DATE,
+            seat_avail INT,
+            PRIMARY KEY (b_id, run_date),
+            FOREIGN KEY (b_id) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    ''')
+
+    # Create booking_history table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS booking_history (
+            name VARCHAR(255),
+            gender CHAR(1),
+            no_of_seat INT,
+            phone CHAR(10),
+            age INT,
+            booking_ref VARCHAR(255) PRIMARY KEY,
+            booking_date DATE,
+            travel_date DATE,
+            bid VARCHAR(255),
+            FOREIGN KEY (bid) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
 
 
 class BusBookingSystem:

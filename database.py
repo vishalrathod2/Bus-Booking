@@ -2,6 +2,9 @@ import sqlite3
 import tkinter as tk
 from tkinter import messagebox 
 from tkinter import PhotoImage
+from tkinter import ttk
+from tkcalendar import DateEntry
+
 
 def initialize_db():
     conn = sqlite3.connect("bus_reservation.db")
@@ -34,17 +37,16 @@ def initialize_db():
 
     # Create bus table
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS bus (
-            bus_id TEXT PRIMARY KEY,
-            bus_type TEXT,
-            capacity INTEGER,
-            fair INTEGER,
-            op_id TEXT NOT NULL,
-            route_id TEXT NOT NULL,
-            FOREIGN KEY (op_id) REFERENCES operator (opr_id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (route_id) REFERENCES route (r_id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-    ''')
+    CREATE TABLE IF NOT EXISTS bus_new (
+        bus_id TEXT PRIMARY KEY,
+        bus_type TEXT,
+        capacity INTEGER,
+        op_id TEXT NOT NULL,
+        route_id TEXT NOT NULL,
+        FOREIGN KEY (op_id) REFERENCES operator (opr_id) ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (route_id) REFERENCES route (r_id) ON DELETE CASCADE ON UPDATE CASCADE
+    )
+''')
 
     # Create running table
     cursor.execute('''
@@ -81,9 +83,8 @@ def check_booking_gui():
     messagebox.showinfo("Info", "Check Booking feature coming soon!")
 
 def find_bus_gui():
-    # Placeholder for "Find Bus" functionality
-    messagebox.showinfo("Info", "Find Bus feature coming soon!")
-
+    messagebox.showinfo("Info", "Check Booking feature coming soon!")  
+    # Add buttons to the GUI
 def admin_gui():
     # Create a new window for the Admin Panel
     admin_window = tk.Toplevel()
@@ -96,9 +97,7 @@ def admin_gui():
     tk.Button(admin_window, text="New Route", font=("Arial", 14), command=new_route_gui).place(relx=0.5, rely=0.6, anchor='center')
     tk.Button(admin_window, text="New Run", font=("Arial", 14), command=new_run_gui).place(relx=0.5, rely=0.75, anchor='center')
 
-def new_operator_gui():
-    # Placeholder for "New Operator" functionality
-    messagebox.showinfo("Info", "New Operator feature coming soon!")
+
 def new_operator_gui():
     # Create a new window for managing operators
     operator_window = tk.Toplevel()

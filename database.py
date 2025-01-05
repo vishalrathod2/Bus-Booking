@@ -436,11 +436,159 @@ def new_operator_gui():
     tk.Button(operator_window, text="Add Operator", font=("Arial", 12), command=add_operator).grid(row=5, column=0, pady=20)
     tk.Button(operator_window, text="Edit Operator", font=("Arial", 12), command=edit_operator).grid(row=5, column=1, pady=20)
     tk.Button(operator_window, text="Show All Operators", font=("Arial", 12), command=show_all_operators).grid(row=6, column=0, columnspan=2, pady=10)
-    
 
 def new_bus_gui():
-    # Placeholder for "New Bus" functionality
-    messagebox.showinfo("Info", "New Bus feature coming soon!")
+    # Create a new window for managing buses
+    bus_window = tk.Toplevel()
+    bus_window.title("Manage Buses")
+    bus_window.geometry("800x600")  # Increased size for better layout
+
+    # Labels and Entry widgets for bus details
+    tk.Label(bus_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(bus_window, text="Bus Type:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(bus_window, text="Capacity:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(bus_window, text="Operator ID:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(bus_window, text="Route ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
+
+    # Entry widgets for user input
+    bus_id_entry = tk.Entry(bus_window, font=("Arial", 12))
+    bus_type_entry = tk.Entry(bus_window, font=("Arial", 12))
+    capacity_entry = tk.Entry(bus_window, font=("Arial", 12))
+
+    # Dropdowns for foreign keys
+    operator_var = tk.StringVar(bus_window)
+    route_var = tk.StringVar(bus_window)
+
+    bus_id_entry.grid(row=0, column=1, padx=10, pady=10)
+    bus_type_entry.grid(row=1, column=1, padx=10, pady=10)
+    capacity_entry.grid(row=2, column=1, padx=10, pady=10)
+
+    operator_menu = tk.OptionMenu(bus_window, operator_var, "")
+    operator_menu.grid(row=3, column=1, padx=10, pady=10)
+
+    route_menu = tk.OptionMenu(bus_window, route_var, "")
+    route_menu.grid(row=4, column=1, padx=10, pady=10)
+
+    # Function to populate dropdowns with data from operator and route tables
+    def populate_dropdowns():
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+
+        # Fetch operator IDs and names
+        cursor.execute("SELECT opr_id, name FROM operator")
+        operators = cursor.fetchall()
+        if operators:
+            operator_menu['menu'].delete(0, 'end')
+            for opr_id, name in operators:
+                operator_menu['menu'].add_command(label=f"{opr_id} - {name}", command=lambda value=f"{opr_id}": operator_var.set(value))
+        else:
+            operator_var.set("No Operators Available")
+            operator_menu['menu'].add_command(label="No Operators Available")
+
+        # Fetch route IDs and details
+        cursor.execute("SELECT r_id, s_name, e_name FROM route")
+        routes = cursor.fetchall()
+        if routes:
+            route_menu['menu'].delete(0, 'end')
+            for r_id, s_name, e_name in routes:
+                route_menu['menu'].add_command(label=f"{r_id} - {s_name} to {e_name}", command=lambda value=f"{r_id}": route_var.set(value))
+        else:
+            route_var.set("No Routes Available")
+            route_menu['menu'].add_command(label="No Routes Available")
+
+        conn.close()
+
+    populate_dropdowns()
+
+    # Function to add a new bus
+    def add_bus():
+        bus_id = bus_id_entry.get().strip()
+        bus_type = bus_type_entry.get().strip()
+        capacity = capacity_entry.get().strip()
+        op_id = operator_var.get().strip()
+        route_id = route_var.get().strip()
+
+        if not (bus_id and bus_type and capacity and op_id and route_id):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            capacity = int(capacity)
+        except ValueError:
+            messagebox.showerror("Error", "Capacity must be a numeric value!")
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Insert data into bus table
+            cursor.execute('''
+                INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
+
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Bus added successfully!")
+            clear_entries()
+            populate_dropdowns()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to clear all entry fields
+    def clear_entries():
+        bus_id_entry.delete(0, tk.END)
+        bus_type_entry.delete(0, tk.END)
+        capacity_entry.delete(0, tk.END)
+        operator_var.set("")
+        route_var.set("")
+
+    # Add buttons for Add and Clear
+    tk.Button(bus_window, text="Add Bus", font=("Arial", 12), command=add_bus).grid(row=5, column=0, pady=20)
+    tk.Button(bus_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=5, column=1, pady=20)
+
+    # Function to show all buses
+    def show_all_buses():
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+
+        # Join bus table with operator and route tables
+        cursor.execute('''
+            SELECT b.bus_id, b.bus_type, b.capacity, o.name AS operator_name, r.s_name || " to " || r.e_name AS route_details
+            FROM bus b
+            JOIN operator o ON b.op_id = o.opr_id
+            JOIN route r ON b.route_id = r.r_id
+        ''')
+        buses = cursor.fetchall()
+        conn.close()
+
+        # Create a new window to display all buses
+        show_window = tk.Toplevel()
+        show_window.title("All Buses")
+        show_window.geometry("800x500")
+
+        # Create a scrollable text area
+        text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
+        text_area.pack(expand=True, fill=tk.BOTH)
+
+        # Add bus details to the text area
+        if buses:
+            for bus in buses:
+                text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
+                text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
+                text_area.insert(tk.END, f"Capacity: {bus[2]}\n")
+                text_area.insert(tk.END, f"Operator: {bus[3]}\n")
+                text_area.insert(tk.END, f"Route: {bus[4]}\n")
+                text_area.insert(tk.END, "-" * 50 + "\n")
+        else:
+            text_area.insert(tk.END, "No buses found.")
+
+    # Add a button to show all buses
+    tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=6, column=0, columnspan=2, pady=10)
 
 def new_route_gui():
     # Placeholder for "New Route" functionality

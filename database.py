@@ -591,8 +591,145 @@ def new_bus_gui():
     tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=6, column=0, columnspan=2, pady=10)
 
 def new_route_gui():
-    # Placeholder for "New Route" functionality
-    messagebox.showinfo("Info", "New Route feature coming soon!")
+    # Create a new window for managing routes
+    route_window = tk.Toplevel()
+    route_window.title("Manage Routes")
+    route_window.geometry("800x600")  # Set the size of the window
+
+    # Labels and Entry widgets for route details
+    tk.Label(route_window, text="Route ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(route_window, text="Start Location Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(route_window, text="Start Location ID:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(route_window, text="End Location Name:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(route_window, text="End Location ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
+
+    # Entry widgets for user input
+    route_id_entry = tk.Entry(route_window, font=("Arial", 12))
+    start_name_entry = tk.Entry(route_window, font=("Arial", 12))
+    start_id_entry = tk.Entry(route_window, font=("Arial", 12))
+    end_name_entry = tk.Entry(route_window, font=("Arial", 12))
+    end_id_entry = tk.Entry(route_window, font=("Arial", 12))
+
+    # Place Entry widgets in the grid
+    route_id_entry.grid(row=0, column=1, padx=10, pady=10)
+    start_name_entry.grid(row=1, column=1, padx=10, pady=10)
+    start_id_entry.grid(row=2, column=1, padx=10, pady=10)
+    end_name_entry.grid(row=3, column=1, padx=10, pady=10)
+    end_id_entry.grid(row=4, column=1, padx=10, pady=10)
+
+    # Function to add a new route
+    def add_route():
+        r_id = route_id_entry.get().strip()
+        s_name = start_name_entry.get().strip()
+        s_id = start_id_entry.get().strip()
+        e_name = end_name_entry.get().strip()
+        e_id = end_id_entry.get().strip()
+
+        if not (r_id and s_name and s_id and e_name and e_id):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Insert data into the route table
+            cursor.execute('''
+                INSERT INTO route (r_id, s_name, s_id, e_name, e_id)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (r_id, s_name, s_id, e_name, e_id))
+
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Route added successfully!")
+            clear_entries()
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Route ID already exists!")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to edit an existing route
+    def edit_route():
+        r_id = route_id_entry.get().strip()
+        s_name = start_name_entry.get().strip()
+        s_id = start_id_entry.get().strip()
+        e_name = end_name_entry.get().strip()
+        e_id = end_id_entry.get().strip()
+
+        if not (r_id and s_name and s_id and e_name and e_id):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Update the existing route
+            cursor.execute('''
+                UPDATE route
+                SET s_name = ?, s_id = ?, e_name = ?, e_id = ?
+                WHERE r_id = ?
+            ''', (s_name, s_id, e_name, e_id, r_id))
+
+            if cursor.rowcount == 0:
+                messagebox.showerror("Error", "Route ID not found!")
+            else:
+                messagebox.showinfo("Success", "Route updated successfully!")
+
+            conn.commit()
+            conn.close()
+
+            clear_entries()
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to clear all entry fields
+    def clear_entries():
+        route_id_entry.delete(0, tk.END)
+        start_name_entry.delete(0, tk.END)
+        start_id_entry.delete(0, tk.END)
+        end_name_entry.delete(0, tk.END)
+        end_id_entry.delete(0, tk.END)
+
+    # Function to show all routes
+    def show_all_routes():
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+
+        # Fetch all routes from the route table
+        cursor.execute('''
+            SELECT r_id, s_name, s_id, e_name, e_id FROM route
+        ''')
+        routes = cursor.fetchall()
+        conn.close()
+
+        # Create a new window to display all routes
+        show_window = tk.Toplevel()
+        show_window.title("All Routes")
+        show_window.geometry("800x500")
+
+        # Create a scrollable text area
+        text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
+        text_area.pack(expand=True, fill=tk.BOTH)
+
+        # Add route details to the text area
+        if routes:
+            for route in routes:
+                text_area.insert(tk.END, f"Route ID: {route[0]}\n")
+                text_area.insert(tk.END, f"Start Location Name: {route[1]}\n")
+                text_area.insert(tk.END, f"Start Location ID: {route[2]}\n")
+                text_area.insert(tk.END, f"End Location Name: {route[3]}\n")
+                text_area.insert(tk.END, f"End Location ID: {route[4]}\n")
+                text_area.insert(tk.END, "-" * 50 + "\n")
+        else:
+            text_area.insert(tk.END, "No routes found.")
+
+    # Add buttons for Add, Edit, and Show All Routes
+    tk.Button(route_window, text="Add Route", font=("Arial", 12), command=add_route).grid(row=5, column=0, pady=20)
+    tk.Button(route_window, text="Edit Route", font=("Arial", 12), command=edit_route).grid(row=5, column=1, pady=20)
+    tk.Button(route_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=6, column=0, pady=20)
+    tk.Button(route_window, text="Show All Routes", font=("Arial", 12), command=show_all_routes).grid(row=6, column=1, pady=20)
 
 def new_run_gui():
     # Placeholder for "New Run" functionality

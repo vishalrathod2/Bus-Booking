@@ -195,7 +195,7 @@
 #     main()
 import sqlite3
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox 
 from tkinter import PhotoImage
 
 def initialize_db():
@@ -732,8 +732,133 @@ def new_route_gui():
     tk.Button(route_window, text="Show All Routes", font=("Arial", 12), command=show_all_routes).grid(row=6, column=1, pady=20)
 
 def new_run_gui():
-    # Placeholder for "New Run" functionality
-    messagebox.showinfo("Info", "New Run feature coming soon!")
+    # Create a new window for managing running buses
+    run_window = tk.Toplevel()
+    run_window.title("Manage Running Buses")
+    run_window.geometry("800x600")  # Set the size of the window
+
+    # Labels and Entry widgets for running details
+    tk.Label(run_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(run_window, text="Run Date (YYYY-MM-DD):", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
+    tk.Label(run_window, text="Seats Available:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
+
+    # Entry widgets for user input
+    bus_id_entry = tk.Entry(run_window, font=("Arial", 12))
+    run_date_entry = tk.Entry(run_window, font=("Arial", 12))
+    seat_avail_entry = tk.Entry(run_window, font=("Arial", 12))
+
+    # Place Entry widgets in the grid
+    bus_id_entry.grid(row=0, column=1, padx=10, pady=10)
+    run_date_entry.grid(row=1, column=1, padx=10, pady=10)
+    seat_avail_entry.grid(row=2, column=1, padx=10, pady=10)
+
+    # Function to add a new running bus
+    def add_running():
+        b_id = bus_id_entry.get().strip()
+        run_date = run_date_entry.get().strip()
+        seat_avail = seat_avail_entry.get().strip()
+
+        if not (b_id and run_date and seat_avail):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            seat_avail = int(seat_avail)  # Ensure seat availability is a valid integer
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Insert data into the running table
+            cursor.execute(''' 
+                INSERT INTO running (b_id, run_date, seat_avail)
+                VALUES (?, ?, ?)
+            ''', (b_id, run_date, seat_avail))
+
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Running bus added successfully!")
+            clear_entries() # type: ignore
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Bus ID or Run Date already exists, or invalid Bus ID!")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to edit an existing running bus
+    def edit_running():
+        b_id = bus_id_entry.get().strip()
+        run_date = run_date_entry.get().strip()
+        seat_avail = seat_avail_entry.get().strip()
+
+        if not (b_id and run_date and seat_avail):
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            seat_avail = int(seat_avail)  # Ensure seat availability is a valid integer
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Update the existing running bus
+            cursor.execute('''
+                UPDATE running
+                SET seat_avail = ?
+                WHERE b_id = ? AND run_date = ?
+            ''', (seat_avail, b_id, run_date))
+
+            if cursor.rowcount == 0:
+                messagebox.showerror("Error", "Bus ID or Run Date not found!")
+            else:
+                messagebox.showinfo("Success", "Running bus updated successfully!")
+
+            conn.commit()
+            conn.close()
+
+            clear_entries() # type: ignore
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to show all running buses
+    def show_all_running():
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Fetch all running buses from the running table
+            cursor.execute('''
+                SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
+                FROM running r
+                JOIN bus b ON r.b_id = b.bus_id
+            ''')
+            running_buses = cursor.fetchall()
+            conn.close()
+
+            # Create a new window to display all running buses
+            show_window = tk.Toplevel()
+            show_window.title("All Running Buses")
+            show_window.geometry("800x500")
+
+            # Create a scrollable text area
+            text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
+            text_area.pack(expand=True, fill=tk.BOTH)
+
+            # Add running bus details to the text area
+            if running_buses:
+                for bus in running_buses:
+                    text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
+                    text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
+                    text_area.insert(tk.END, f"Run Date: {bus[2]}\n")
+                    text_area.insert(tk.END, f"Seats Available: {bus[3]}\n")
+                    text_area.insert(tk.END, "-" * 50 + "\n")
+            else:
+                text_area.insert(tk.END, "No running buses found.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Add buttons for managing running buses
+    tk.Button(run_window, text="Add Running Bus", font=("Arial", 12), command=add_running).grid(row=3, column=0, pady=20)
+    tk.Button(run_window, text="Edit Running Bus", font=("Arial", 12), command=edit_running).grid(row=4, column=0, pady=20)
+    tk.Button(run_window, text="Show All Running Buses", font=("Arial", 12), command=show_all_running).grid(row=5, column=0, pady=20)
+
 
 def main():
     initialize_db()

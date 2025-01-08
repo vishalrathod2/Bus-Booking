@@ -4,16 +4,10 @@ from tkinter import messagebox
 from tkinter import PhotoImage
 from tkinter import ttk
 from tkcalendar import DateEntry
-
-
 def initialize_db():
     conn = sqlite3.connect("bus_reservation.db")
     cursor = conn.cursor()
-
-    # Enable foreign key checks in SQLite
     cursor.execute("PRAGMA foreign_keys = ON;")
-
-    # Create operator table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS operator (
             opr_id TEXT PRIMARY KEY,
@@ -23,8 +17,6 @@ def initialize_db():
             email TEXT
         )
     ''')
-
-    # Create route table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS route (
             r_id TEXT PRIMARY KEY,
@@ -35,7 +27,6 @@ def initialize_db():
         )
     ''')
 
-    # Create bus table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS bus_new (
         bus_id TEXT PRIMARY KEY,
@@ -48,7 +39,6 @@ def initialize_db():
     )
 ''')
 
-    # Create running table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS running (
             b_id TEXT,
@@ -59,7 +49,6 @@ def initialize_db():
         )
     ''')
 
-    # Create booking_history table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS booking_history (
             name TEXT,
@@ -79,19 +68,101 @@ def initialize_db():
     conn.close()
 
 def check_booking_gui():
-    # Placeholder for "Check Booking" functionality
     messagebox.showinfo("Info", "Check Booking feature coming soon!")
 
 def find_bus_gui():
+    root = tk.Tk()
+    root.title("Find Bus")
+    root.geometry("800x500")
+
+    # Title label
+    tk.Label(root, text="Find Bus", font=("Arial", 20, "bold")).pack(pady=10)
+
+    # Input fields for source, destination, and travel date
+    input_frame = tk.Frame(root)
+    input_frame.pack(pady=20)
+
+    tk.Label(input_frame, text="Source Name:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    tk.Label(input_frame, text="Destination Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    tk.Label(input_frame, text="Travel Date (YYYY-MM-DD):", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=5, sticky="w")
+
+    source_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
+    destination_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
+    travel_date_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
+
+    source_entry.grid(row=0, column=1, padx=10, pady=5)
+    destination_entry.grid(row=1, column=1, padx=10, pady=5)
+    travel_date_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    # Function to search buses
+    def search_buses():
+        source = source_entry.get().strip()
+        destination = destination_entry.get().strip()
+        travel_date = travel_date_entry.get().strip()
+
+        if not source or not destination or not travel_date:
+            messagebox.showerror("Error", "All fields are required!")
+            return
+
+        try:
+            # Connect to the database
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Query to fetch buses based on source, destination, and date
+            query = '''
+                SELECT b.bus_id, b.bus_type, b.capacity, r.run_date, r.seat_avail
+                FROM running r
+                JOIN bus_new b ON r.b_id = b.bus_id
+                JOIN route rt ON b.route_id = rt.r_id
+                WHERE rt.s_name = ? AND rt.e_name = ? AND r.run_date = ?
+            '''
+            cursor.execute(query, (source, destination, travel_date))
+            buses = cursor.fetchall()
+            conn.close()
+
+            if buses:
+                display_buses(buses)
+            else:
+                messagebox.showinfo("No Buses Found", "No buses available for the selected route and date.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    # Function to display buses
+    def display_buses(buses):
+        bus_window = tk.Toplevel(root)
+        bus_window.title("Available Buses")
+        bus_window.geometry("800x400")
+
+        # Create a Treeview to display the bus details
+        columns = ("Bus ID", "Bus Type", "Capacity", "Run Date", "Seats Available")
+        tree = ttk.Treeview(bus_window, columns=columns, show="headings", height=20)
+        tree.pack(fill=tk.BOTH, expand=True)
+
+        # Define headings
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150)
+
+        # Insert bus details into the tree
+        for bus in buses:
+            tree.insert("", tk.END, values=bus)
+
+        # Add a "Close" button
+        tk.Button(bus_window, text="Close", font=("Arial", 12), command=bus_window.destroy).pack(pady=10)
+
+    # Search button
+    tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
+
+    # Run the application
+    root.mainloop()
+
     messagebox.showinfo("Info", "Check Booking feature coming soon!")  
-    # Add buttons to the GUI
 def admin_gui():
-    # Create a new window for the Admin Panel
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")
-    admin_window.geometry("400x400")  # Set the size of the admin window
+    admin_window.geometry("400x400")  
 
-    # Add buttons to the Admin Panel
     tk.Button(admin_window, text="New Operator", font=("Arial", 14), command=new_operator_gui).place(relx=0.5, rely=0.3, anchor='center')
     tk.Button(admin_window, text="New Bus", font=("Arial", 14), command=new_bus_gui).place(relx=0.5, rely=0.45, anchor='center')
     tk.Button(admin_window, text="New Route", font=("Arial", 14), command=new_route_gui).place(relx=0.5, rely=0.6, anchor='center')
@@ -99,19 +170,16 @@ def admin_gui():
 
 
 def new_operator_gui():
-    # Create a new window for managing operators
     operator_window = tk.Toplevel()
     operator_window.title("Manage Operators")
-    operator_window.geometry("500x450")  # Set the size of the operator window
+    operator_window.geometry("500x450") 
 
-    # Labels and Entry widgets for operator details
     tk.Label(operator_window, text="Operator ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(operator_window, text="Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
     tk.Label(operator_window, text="Address:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
     tk.Label(operator_window, text="Phone:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
     tk.Label(operator_window, text="Email:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
 
-    # Entry widgets for user input
     opr_id_entry = tk.Entry(operator_window, font=("Arial", 12))
     name_entry = tk.Entry(operator_window, font=("Arial", 12))
     address_entry = tk.Entry(operator_window, font=("Arial", 12))
@@ -124,7 +192,6 @@ def new_operator_gui():
     phone_entry.grid(row=3, column=1, padx=10, pady=10)
     email_entry.grid(row=4, column=1, padx=10, pady=10)
 
-    # Function to add a new operator
     def add_operator():
         opr_id = opr_id_entry.get().strip()
         name = name_entry.get().strip()
@@ -144,7 +211,6 @@ def new_operator_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Insert data into operator table
             cursor.execute('''
                 INSERT INTO operator (opr_id, name, address, phone, email)
                 VALUES (?, ?, ?, ?, ?)
@@ -160,7 +226,6 @@ def new_operator_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to edit an existing operator
     def edit_operator():
         opr_id = opr_id_entry.get().strip()
         name = name_entry.get().strip()
@@ -180,7 +245,6 @@ def new_operator_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Update data in operator table
             cursor.execute('''
                 UPDATE operator
                 SET name = ?, address = ?, phone = ?, email = ?
@@ -198,7 +262,6 @@ def new_operator_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to clear all entry fields
     def clear_entries():
         opr_id_entry.delete(0, tk.END)
         name_entry.delete(0, tk.END)
@@ -206,7 +269,6 @@ def new_operator_gui():
         phone_entry.delete(0, tk.END)
         email_entry.delete(0, tk.END)
 
-    # Function to show all operators in a new window
     def show_all_operators():
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
@@ -215,16 +277,13 @@ def new_operator_gui():
         operators = cursor.fetchall()
         conn.close()
 
-        # Create a new window to display operators
         show_window = tk.Toplevel()
         show_window.title("All Operators")
         show_window.geometry("600x400")
 
-        # Create a scrollable text area
         text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
         text_area.pack(expand=True, fill=tk.BOTH)
 
-        # Add operator details to the text area
         if operators:
             for operator in operators:
                 text_area.insert(tk.END, f"Operator ID: {operator[0]}\n")
@@ -236,30 +295,25 @@ def new_operator_gui():
         else:
             text_area.insert(tk.END, "No operators found.")
 
-    # Add buttons for Add, Edit, and Show All Operators
     tk.Button(operator_window, text="Add Operator", font=("Arial", 12), command=add_operator).grid(row=5, column=0, pady=20)
     tk.Button(operator_window, text="Edit Operator", font=("Arial", 12), command=edit_operator).grid(row=5, column=1, pady=20)
     tk.Button(operator_window, text="Show All Operators", font=("Arial", 12), command=show_all_operators).grid(row=6, column=0, columnspan=2, pady=10)
 
 def new_bus_gui():
-    # Create a new window for managing buses
     bus_window = tk.Toplevel()
     bus_window.title("Manage Buses")
-    bus_window.geometry("800x600")  # Increased size for better layout
+    bus_window.geometry("800x600") 
 
-    # Labels and Entry widgets for bus details
     tk.Label(bus_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(bus_window, text="Bus Type:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
     tk.Label(bus_window, text="Capacity:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
     tk.Label(bus_window, text="Operator ID:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
     tk.Label(bus_window, text="Route ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
 
-    # Entry widgets for user input
     bus_id_entry = tk.Entry(bus_window, font=("Arial", 12))
     bus_type_entry = tk.Entry(bus_window, font=("Arial", 12))
     capacity_entry = tk.Entry(bus_window, font=("Arial", 12))
 
-    # Dropdowns for foreign keys
     operator_var = tk.StringVar(bus_window)
     route_var = tk.StringVar(bus_window)
 
@@ -273,12 +327,10 @@ def new_bus_gui():
     route_menu = tk.OptionMenu(bus_window, route_var, "")
     route_menu.grid(row=4, column=1, padx=10, pady=10)
 
-    # Function to populate dropdowns with data from operator and route tables
     def populate_dropdowns():
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
 
-        # Fetch operator IDs and names
         cursor.execute("SELECT opr_id, name FROM operator")
         operators = cursor.fetchall()
         if operators:
@@ -289,7 +341,6 @@ def new_bus_gui():
             operator_var.set("No Operators Available")
             operator_menu['menu'].add_command(label="No Operators Available")
 
-        # Fetch route IDs and details
         cursor.execute("SELECT r_id, s_name, e_name FROM route")
         routes = cursor.fetchall()
         if routes:
@@ -304,7 +355,6 @@ def new_bus_gui():
 
     populate_dropdowns()
 
-    # Function to add a new bus
     def add_bus():
         bus_id = bus_id_entry.get().strip()
         bus_type = bus_type_entry.get().strip()
@@ -326,7 +376,6 @@ def new_bus_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Insert data into bus table
             cursor.execute('''
                 INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
                 VALUES (?, ?, ?, ?, ?)
@@ -342,25 +391,19 @@ def new_bus_gui():
             messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
-
-    # Function to clear all entry fields
     def clear_entries():
         bus_id_entry.delete(0, tk.END)
         bus_type_entry.delete(0, tk.END)
         capacity_entry.delete(0, tk.END)
         operator_var.set("")
         route_var.set("")
-
-    # Add buttons for Add and Clear
     tk.Button(bus_window, text="Add Bus", font=("Arial", 12), command=add_bus).grid(row=5, column=0, pady=20)
     tk.Button(bus_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=5, column=1, pady=20)
 
-    # Function to show all buses
     def show_all_buses():
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
 
-        # Join bus table with operator and route tables
         cursor.execute('''
             SELECT b.bus_id, b.bus_type, b.capacity, o.name AS operator_name, r.s_name || " to " || r.e_name AS route_details
             FROM bus b
@@ -370,16 +413,13 @@ def new_bus_gui():
         buses = cursor.fetchall()
         conn.close()
 
-        # Create a new window to display all buses
         show_window = tk.Toplevel()
         show_window.title("All Buses")
         show_window.geometry("800x500")
 
-        # Create a scrollable text area
         text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
         text_area.pack(expand=True, fill=tk.BOTH)
 
-        # Add bus details to the text area
         if buses:
             for bus in buses:
                 text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
@@ -391,37 +431,31 @@ def new_bus_gui():
         else:
             text_area.insert(tk.END, "No buses found.")
 
-    # Add a button to show all buses
     tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=6, column=0, columnspan=2, pady=10)
 
 def new_route_gui():
-    # Create a new window for managing routes
     route_window = tk.Toplevel()
     route_window.title("Manage Routes")
-    route_window.geometry("800x600")  # Set the size of the window
+    route_window.geometry("800x600")  
 
-    # Labels and Entry widgets for route details
     tk.Label(route_window, text="Route ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(route_window, text="Start Location Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
     tk.Label(route_window, text="Start Location ID:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
     tk.Label(route_window, text="End Location Name:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
     tk.Label(route_window, text="End Location ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
 
-    # Entry widgets for user input
     route_id_entry = tk.Entry(route_window, font=("Arial", 12))
     start_name_entry = tk.Entry(route_window, font=("Arial", 12))
     start_id_entry = tk.Entry(route_window, font=("Arial", 12))
     end_name_entry = tk.Entry(route_window, font=("Arial", 12))
     end_id_entry = tk.Entry(route_window, font=("Arial", 12))
 
-    # Place Entry widgets in the grid
     route_id_entry.grid(row=0, column=1, padx=10, pady=10)
     start_name_entry.grid(row=1, column=1, padx=10, pady=10)
     start_id_entry.grid(row=2, column=1, padx=10, pady=10)
     end_name_entry.grid(row=3, column=1, padx=10, pady=10)
     end_id_entry.grid(row=4, column=1, padx=10, pady=10)
 
-    # Function to add a new route
     def add_route():
         r_id = route_id_entry.get().strip()
         s_name = start_name_entry.get().strip()
@@ -437,7 +471,6 @@ def new_route_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Insert data into the route table
             cursor.execute('''
                 INSERT INTO route (r_id, s_name, s_id, e_name, e_id)
                 VALUES (?, ?, ?, ?, ?)
@@ -453,7 +486,6 @@ def new_route_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to edit an existing route
     def edit_route():
         r_id = route_id_entry.get().strip()
         s_name = start_name_entry.get().strip()
@@ -469,7 +501,6 @@ def new_route_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Update the existing route
             cursor.execute('''
                 UPDATE route
                 SET s_name = ?, s_id = ?, e_name = ?, e_id = ?
@@ -488,7 +519,6 @@ def new_route_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to clear all entry fields
     def clear_entries():
         route_id_entry.delete(0, tk.END)
         start_name_entry.delete(0, tk.END)
@@ -496,28 +526,23 @@ def new_route_gui():
         end_name_entry.delete(0, tk.END)
         end_id_entry.delete(0, tk.END)
 
-    # Function to show all routes
     def show_all_routes():
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
 
-        # Fetch all routes from the route table
         cursor.execute('''
             SELECT r_id, s_name, s_id, e_name, e_id FROM route
         ''')
         routes = cursor.fetchall()
         conn.close()
 
-        # Create a new window to display all routes
         show_window = tk.Toplevel()
         show_window.title("All Routes")
         show_window.geometry("800x500")
 
-        # Create a scrollable text area
         text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
         text_area.pack(expand=True, fill=tk.BOTH)
 
-        # Add route details to the text area
         if routes:
             for route in routes:
                 text_area.insert(tk.END, f"Route ID: {route[0]}\n")
@@ -529,34 +554,28 @@ def new_route_gui():
         else:
             text_area.insert(tk.END, "No routes found.")
 
-    # Add buttons for Add, Edit, and Show All Routes
     tk.Button(route_window, text="Add Route", font=("Arial", 12), command=add_route).grid(row=5, column=0, pady=20)
     tk.Button(route_window, text="Edit Route", font=("Arial", 12), command=edit_route).grid(row=5, column=1, pady=20)
     tk.Button(route_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=6, column=0, pady=20)
     tk.Button(route_window, text="Show All Routes", font=("Arial", 12), command=show_all_routes).grid(row=6, column=1, pady=20)
 
 def new_run_gui():
-    # Create a new window for managing running buses
     run_window = tk.Toplevel()
     run_window.title("Manage Running Buses")
-    run_window.geometry("800x600")  # Set the size of the window
+    run_window.geometry("800x600")  
 
-    # Labels and Entry widgets for running details
     tk.Label(run_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(run_window, text="Run Date (YYYY-MM-DD):", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
     tk.Label(run_window, text="Seats Available:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
 
-    # Entry widgets for user input
     bus_id_entry = tk.Entry(run_window, font=("Arial", 12))
     run_date_entry = tk.Entry(run_window, font=("Arial", 12))
     seat_avail_entry = tk.Entry(run_window, font=("Arial", 12))
 
-    # Place Entry widgets in the grid
     bus_id_entry.grid(row=0, column=1, padx=10, pady=10)
     run_date_entry.grid(row=1, column=1, padx=10, pady=10)
     seat_avail_entry.grid(row=2, column=1, padx=10, pady=10)
 
-    # Function to add a new running bus
     def add_running():
         b_id = bus_id_entry.get().strip()
         run_date = run_date_entry.get().strip()
@@ -567,11 +586,10 @@ def new_run_gui():
             return
 
         try:
-            seat_avail = int(seat_avail)  # Ensure seat availability is a valid integer
+            seat_avail = int(seat_avail) 
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Insert data into the running table
             cursor.execute(''' 
                 INSERT INTO running (b_id, run_date, seat_avail)
                 VALUES (?, ?, ?)
@@ -581,13 +599,12 @@ def new_run_gui():
             conn.close()
 
             messagebox.showinfo("Success", "Running bus added successfully!")
-            clear_entries() # type: ignore
+            clear_entries() 
         except sqlite3.IntegrityError:
             messagebox.showerror("Error", "Bus ID or Run Date already exists, or invalid Bus ID!")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to edit an existing running bus
     def edit_running():
         b_id = bus_id_entry.get().strip()
         run_date = run_date_entry.get().strip()
@@ -598,11 +615,10 @@ def new_run_gui():
             return
 
         try:
-            seat_avail = int(seat_avail)  # Ensure seat availability is a valid integer
+            seat_avail = int(seat_avail)  
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Update the existing running bus
             cursor.execute('''
                 UPDATE running
                 SET seat_avail = ?
@@ -617,17 +633,20 @@ def new_run_gui():
             conn.commit()
             conn.close()
 
-            clear_entries() # type: ignore
+            clear_entries()
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    # Function to show all running buses
+    def clear_entries():
+        bus_id_entry.delete(0, tk.END)
+        run_date_entry.delete(0, tk.END)
+        seat_avail_entry.delete(0, tk.END)
+
     def show_all_running():
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            # Fetch all running buses from the running table
             cursor.execute('''
                 SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
                 FROM running r
@@ -636,16 +655,11 @@ def new_run_gui():
             running_buses = cursor.fetchall()
             conn.close()
 
-            # Create a new window to display all running buses
             show_window = tk.Toplevel()
             show_window.title("All Running Buses")
             show_window.geometry("800x500")
-
-            # Create a scrollable text area
             text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
             text_area.pack(expand=True, fill=tk.BOTH)
-
-            # Add running bus details to the text area
             if running_buses:
                 for bus in running_buses:
                     text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
@@ -657,26 +671,19 @@ def new_run_gui():
                 text_area.insert(tk.END, "No running buses found.")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
-
-    # Add buttons for managing running buses
     tk.Button(run_window, text="Add Running Bus", font=("Arial", 12), command=add_running).grid(row=3, column=0, pady=20)
     tk.Button(run_window, text="Edit Running Bus", font=("Arial", 12), command=edit_running).grid(row=4, column=0, pady=20)
     tk.Button(run_window, text="Show All Running Buses", font=("Arial", 12), command=show_all_running).grid(row=5, column=0, pady=20)
-
-
 def main():
     initialize_db()
 
     root = tk.Tk()
     root.title("Bus Reservation System")
-    root.geometry("600x500")  # Set the size of the window
+    root.geometry("600x500") 
 
-    # Add an image to the home page
     image = PhotoImage(file="C:\\Users\\ratho\\OneDrive\\Desktop\\bus booking\\Bus-Booking\\Bus_for_project.png")
     image_label = tk.Label(root, image=image)
-    image_label.place(relx=0.5, rely=0.2, anchor='center')  # Center the image at 20% of the window height
-
-    # Add buttons for Check Booking, Find Bus, and Admin
+    image_label.place(relx=0.5, rely=0.2, anchor='center')
     tk.Button(root, text="Check Booking", font=("Arial", 14), command=check_booking_gui).place(relx=0.5, rely=0.5, anchor='center')
     tk.Button(root, text="Find Bus", font=("Arial", 14), command=find_bus_gui).place(relx=0.5, rely=0.6, anchor='center')
     tk.Button(root, text="Admin", font=("Arial", 14), command=admin_gui).place(relx=0.5, rely=0.7, anchor='center')

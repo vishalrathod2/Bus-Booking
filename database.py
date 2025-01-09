@@ -70,7 +70,8 @@ def initialize_db():
 def check_booking_gui():
     messagebox.showinfo("Info", "Check Booking feature coming soon!")
 
-def find_bus_gui():
+def find_bus_page():
+    # Create the main window
     root = tk.Tk()
     root.title("Find Bus")
     root.geometry("800x500")
@@ -111,14 +112,17 @@ def find_bus_gui():
 
             # Query to fetch buses based on source, destination, and date
             query = '''
-                SELECT b.bus_id, b.bus_type, b.capacity, r.run_date, r.seat_avail
-                FROM running r
-                JOIN bus_new b ON r.b_id = b.bus_id
-                JOIN route rt ON b.route_id = rt.r_id
-                WHERE rt.s_name = ? AND rt.e_name = ? AND r.run_date = ?
-            '''
+            SELECT b.bus_id, b.bus_type, b.capacity, r.run_date, r.seat_avail
+            FROM running r
+            JOIN bus_new b ON r.b_id = b.bus_id
+            JOIN route rt ON b.route_id = rt.r_id
+            WHERE LOWER(rt.s_name) = LOWER(?) AND LOWER(rt.e_name) = LOWER(?) AND r.run_date = ?
+        '''
             cursor.execute(query, (source, destination, travel_date))
             buses = cursor.fetchall()
+            print(f"DEBUG: Source: {source}, Destination: {destination}, Date: {travel_date}")  # Debug inputs
+            print(f"DEBUG: Query results: {buses}")  # Debug query results
+
             conn.close()
 
             if buses:
@@ -156,7 +160,6 @@ def find_bus_gui():
 
     # Run the application
     root.mainloop()
-
     messagebox.showinfo("Info", "Check Booking feature coming soon!")  
 def admin_gui():
     admin_window = tk.Toplevel()
@@ -685,7 +688,7 @@ def main():
     image_label = tk.Label(root, image=image)
     image_label.place(relx=0.5, rely=0.2, anchor='center')
     tk.Button(root, text="Check Booking", font=("Arial", 14), command=check_booking_gui).place(relx=0.5, rely=0.5, anchor='center')
-    tk.Button(root, text="Find Bus", font=("Arial", 14), command=find_bus_gui).place(relx=0.5, rely=0.6, anchor='center')
+    tk.Button(root, text="Find Bus", font=("Arial", 14), command=find_bus_page).place(relx=0.5, rely=0.6, anchor='center')
     tk.Button(root, text="Admin", font=("Arial", 14), command=admin_gui).place(relx=0.5, rely=0.7, anchor='center')
 
     root.mainloop()

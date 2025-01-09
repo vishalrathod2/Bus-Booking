@@ -242,33 +242,55 @@ def find_bus_page():
 
             try:
                 tickets = int(tickets)
+                if tickets <= 0:
+                    messagebox.showerror("Error", "Number of tickets must be greater than 0!")
+                    return
                 selected_seats = [seat for seat, var in checkboxes.items() if var.get() == 1]
 
-                if len(selected_seats) != tickets:
-                    messagebox.showerror("Error", "Please select the exact number of seats!")
+                if tickets > len(available_seats):
+                    messagebox.showerror("Error", f"Only {len(available_seats)} seats are available. Please adjust your ticket count.")
                     return
+                if len(selected_seats) != tickets:
+                    messagebox.showerror("Error", f"You need to select exactly {tickets} seats! You have selected {len(selected_seats)}.")
+                    return
+                selected_seats = [seat for seat, var in checkboxes.items() if var.get() == 1]
 
-                seat_numbers = ", ".join(map(str, selected_seats))
+                seat_numbers = ",".join(map(str, selected_seats))
+
 
                 conn = sqlite3.connect("bus_reservation.db")
                 cursor = conn.cursor()
 
                 cursor.execute('''
-    INSERT INTO booking (booking_id, b_id, run_date, user_name, contact, tickets)
-    SELECT booking_id, b_id, run_date, user_name, contact, tickets
-    FROM booking_old
-''')
+                SELECT seat_numbers
+                FROM booking
+                WHERE b_id = ? AND run_date = ?
+                ''', (bus_id, travel_date))
+                booked_seats = cursor.fetchall()
+                booked_seat_list = []
+                for seats in booked_seats:
+                 booked_seat_list.extend(map(int, seats[0].split(",")))
+                available_seats = [seat for seat in range(1, int(capacity) + 1) if seat not in booked_seat_list]
+                if len(available_seats) < tickets:
+                 messagebox.showerror("Error", "Not enough contiguous seats available!")
+                 return
+
+                reserved_seats = available_seats[:tickets]
+                seat_numbers = ",".join(map(str, reserved_seats))
 
                 cursor.execute('''
-                    UPDATE running
-                    SET seat_avail = seat_avail - ?
-                    WHERE b_id = ? AND run_date = ?
-                ''', (tickets, bus_id, travel_date))
-
+            INSERT INTO booking (b_id, run_date, user_name, contact, tickets, seat_numbers)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (bus_id, travel_date, user_name, contact, tickets, seat_numbers))
+                cursor.execute('''
+            UPDATE running
+            SET seat_avail = seat_avail - ?
+            WHERE b_id = ? AND run_date = ?
+        ''', (tickets, bus_id, travel_date))
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Success", "Booking confirmed!")
+                messagebox.showinfo("Success", f"Booking confirmed! Reserved seats: {seat_numbers}")
                 booking_window.destroy()
             except ValueError:
                 messagebox.showerror("Error", "Number of tickets must be a valid number!")

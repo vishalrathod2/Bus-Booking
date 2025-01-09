@@ -112,17 +112,19 @@ def find_bus_page():
 
             # Query to fetch buses based on source, destination, and date
             query = '''
-            SELECT b.bus_id, b.bus_type, b.capacity, r.run_date, r.seat_avail
-            FROM running r
-            JOIN bus_new b ON r.b_id = b.bus_id
-            JOIN route rt ON b.route_id = rt.r_id
-            WHERE LOWER(rt.s_name) = LOWER(?) AND LOWER(rt.e_name) = LOWER(?) AND r.run_date = ?
-        '''
+                SELECT 
+                    b.bus_id, b.bus_type, b.capacity, r.run_date, r.seat_avail
+                FROM 
+                    bus b
+                JOIN 
+                    route rt ON b.route_id = rt.r_id
+                JOIN 
+                    running r ON b.bus_id = r.b_id
+                WHERE 
+                    rt.s_name = ? AND rt.e_name = ? AND r.run_date = ?
+            '''
             cursor.execute(query, (source, destination, travel_date))
             buses = cursor.fetchall()
-            print(f"DEBUG: Source: {source}, Destination: {destination}, Date: {travel_date}")  # Debug inputs
-            print(f"DEBUG: Query results: {buses}")  # Debug query results
-
             conn.close()
 
             if buses:
@@ -158,7 +160,6 @@ def find_bus_page():
     # Search button
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
-    # Run the application
     root.mainloop()
     messagebox.showinfo("Info", "Check Booking feature coming soon!")  
 def admin_gui():
@@ -439,7 +440,7 @@ def new_bus_gui():
 def new_route_gui():
     route_window = tk.Toplevel()
     route_window.title("Manage Routes")
-    route_window.geometry("800x600")  
+    route_window.geometry("800x600")
 
     tk.Label(route_window, text="Route ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(route_window, text="Start Location Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
@@ -468,6 +469,10 @@ def new_route_gui():
 
         if not (r_id and s_name and s_id and e_name and e_id):
             messagebox.showerror("Error", "All fields are required!")
+            return
+
+        if s_id == e_id:
+            messagebox.showerror("Error", "Start Location ID and End Location ID cannot be the same!")
             return
 
         try:
@@ -500,9 +505,18 @@ def new_route_gui():
             messagebox.showerror("Error", "All fields are required!")
             return
 
+        if s_id == e_id:
+            messagebox.showerror("Error", "Start Location ID and End Location ID cannot be the same!")
+            return
+
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
+
+            cursor.execute("SELECT 1 FROM route WHERE r_id = ?", (r_id,))
+            if cursor.fetchone() is None:
+                messagebox.showerror("Error", "Route ID not found!")
+                return
 
             cursor.execute('''
                 UPDATE route
@@ -510,14 +524,10 @@ def new_route_gui():
                 WHERE r_id = ?
             ''', (s_name, s_id, e_name, e_id, r_id))
 
-            if cursor.rowcount == 0:
-                messagebox.showerror("Error", "Route ID not found!")
-            else:
-                messagebox.showinfo("Success", "Route updated successfully!")
-
             conn.commit()
             conn.close()
 
+            messagebox.showinfo("Success", "Route updated successfully!")
             clear_entries()
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
@@ -541,21 +551,23 @@ def new_route_gui():
 
         show_window = tk.Toplevel()
         show_window.title("All Routes")
-        show_window.geometry("800x500")
+        show_window.geometry("800x400")
 
-        text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
-        text_area.pack(expand=True, fill=tk.BOTH)
+        columns = ("Route ID", "Start Name", "Start ID", "End Name", "End ID")
+        tree = ttk.Treeview(show_window, columns=columns, show="headings", height=20)
+        tree.pack(fill=tk.BOTH, expand=True)
 
-        if routes:
-            for route in routes:
-                text_area.insert(tk.END, f"Route ID: {route[0]}\n")
-                text_area.insert(tk.END, f"Start Location Name: {route[1]}\n")
-                text_area.insert(tk.END, f"Start Location ID: {route[2]}\n")
-                text_area.insert(tk.END, f"End Location Name: {route[3]}\n")
-                text_area.insert(tk.END, f"End Location ID: {route[4]}\n")
-                text_area.insert(tk.END, "-" * 50 + "\n")
-        else:
-            text_area.insert(tk.END, "No routes found.")
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=150)
+
+        for route in routes:
+            tree.insert("", tk.END, values=route)
+
+        if not routes:
+            messagebox.showinfo("No Routes Found", "There are no routes in the database.")
+
+        tk.Button(show_window, text="Close", command=show_window.destroy).pack(pady=10)
 
     tk.Button(route_window, text="Add Route", font=("Arial", 12), command=add_route).grid(row=5, column=0, pady=20)
     tk.Button(route_window, text="Edit Route", font=("Arial", 12), command=edit_route).grid(row=5, column=1, pady=20)

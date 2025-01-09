@@ -50,15 +50,15 @@ def initialize_db():
     ''')
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS booking (
-        booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        b_id TEXT NOT NULL,
-        run_date DATE NOT NULL,
-        user_name TEXT NOT NULL,
-        contact TEXT NOT NULL,
-        tickets INTEGER NOT NULL,
-        seat_numbers TEXT NOT NULL,
-        FOREIGN KEY (b_id) REFERENCES bus (bus_id)
-    )
+    booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    b_id TEXT NOT NULL,
+    run_date DATE NOT NULL,
+    user_name TEXT NOT NULL,
+    contact TEXT NOT NULL,
+    tickets INTEGER NOT NULL,
+    FOREIGN KEY (b_id) REFERENCES bus (bus_id)
+);
+
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS booking_history (
@@ -80,6 +80,7 @@ def initialize_db():
 
 def check_booking_gui():
     messagebox.showinfo("Info", "Check Booking feature coming soon!")
+
 def find_bus_page():
     # Main window
     root = tk.Tk()
@@ -170,33 +171,12 @@ def find_bus_page():
 
         tk.Button(bus_window, text="Book Ticket", font=("Arial", 12), command=book_ticket).pack(pady=10)
 
-    def get_taken_seats(bus_id, travel_date):
-        try:
-            conn = sqlite3.connect("bus_reservation.db")
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT seat_numbers FROM booking
-                WHERE b_id = ? AND run_date = ?
-            ''', (bus_id, travel_date))
-            bookings = cursor.fetchall()
-            conn.close()
-
-            taken_seats = []
-            for booking in bookings:
-                seats = booking[0].split(", ")
-                taken_seats.extend([int(seat) for seat in seats])
-
-            return taken_seats
-        except Exception as e:
-            print(f"Error fetching taken seats: {e}")
-            return []
-
     def open_booking_form(bus_details, travel_date):
         bus_id, bus_type, capacity, run_date, seats_available = bus_details
 
         booking_window = tk.Toplevel(root)
         booking_window.title("Book Ticket")
-        booking_window.geometry("600x600")
+        booking_window.geometry("400x400")
 
         tk.Label(booking_window, text="Book Ticket", font=("Arial", 20, "bold")).pack(pady=10)
 
@@ -215,22 +195,6 @@ def find_bus_page():
         tickets_entry = tk.Entry(booking_window, font=("Arial", 12))
         tickets_entry.pack(pady=5)
 
-        tk.Label(booking_window, text="Select Seats:", font=("Arial", 12)).pack(pady=5)
-
-        taken_seats = get_taken_seats(bus_id, travel_date)
-        available_seats = [i for i in range(1, int(capacity) + 1) if i not in taken_seats]
-
-        seat_frame = tk.Frame(booking_window)
-        seat_frame.pack(pady=10)
-
-        selected_seats = []
-        checkboxes = {}
-        for seat in available_seats:
-            var = tk.IntVar()
-            checkbox = tk.Checkbutton(seat_frame, text=str(seat), variable=var)
-            checkboxes[seat] = var
-            checkbox.pack(side=tk.LEFT, padx=5)
-
         def confirm_booking():
             user_name = user_name_entry.get().strip()
             contact = contact_entry.get().strip()
@@ -245,52 +209,29 @@ def find_bus_page():
                 if tickets <= 0:
                     messagebox.showerror("Error", "Number of tickets must be greater than 0!")
                     return
-                selected_seats = [seat for seat, var in checkboxes.items() if var.get() == 1]
 
-                if tickets > len(available_seats):
-                    messagebox.showerror("Error", f"Only {len(available_seats)} seats are available. Please adjust your ticket count.")
+                if tickets > int(seats_available):
+                    messagebox.showerror("Error", f"Only {seats_available} seats are available. Please adjust your ticket count.")
                     return
-                if len(selected_seats) != tickets:
-                    messagebox.showerror("Error", f"You need to select exactly {tickets} seats! You have selected {len(selected_seats)}.")
-                    return
-                selected_seats = [seat for seat, var in checkboxes.items() if var.get() == 1]
-
-                seat_numbers = ",".join(map(str, selected_seats))
-
 
                 conn = sqlite3.connect("bus_reservation.db")
                 cursor = conn.cursor()
 
                 cursor.execute('''
-                SELECT seat_numbers
-                FROM booking
-                WHERE b_id = ? AND run_date = ?
-                ''', (bus_id, travel_date))
-                booked_seats = cursor.fetchall()
-                booked_seat_list = []
-                for seats in booked_seats:
-                 booked_seat_list.extend(map(int, seats[0].split(",")))
-                available_seats = [seat for seat in range(1, int(capacity) + 1) if seat not in booked_seat_list]
-                if len(available_seats) < tickets:
-                 messagebox.showerror("Error", "Not enough contiguous seats available!")
-                 return
-
-                reserved_seats = available_seats[:tickets]
-                seat_numbers = ",".join(map(str, reserved_seats))
+                INSERT INTO booking (b_id, run_date, user_name, contact, tickets)
+                VALUES (?, ?, ?, ?, ?)
+                ''', (bus_id, travel_date, user_name, contact, tickets))
 
                 cursor.execute('''
-            INSERT INTO booking (b_id, run_date, user_name, contact, tickets, seat_numbers)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (bus_id, travel_date, user_name, contact, tickets, seat_numbers))
-                cursor.execute('''
-            UPDATE running
-            SET seat_avail = seat_avail - ?
-            WHERE b_id = ? AND run_date = ?
-        ''', (tickets, bus_id, travel_date))
+                    UPDATE running
+                    SET seat_avail = seat_avail - ?
+                    WHERE b_id = ? AND run_date = ?
+                ''', (tickets, bus_id, travel_date))
+
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Success", f"Booking confirmed! Reserved seats: {seat_numbers}")
+                messagebox.showinfo("Success", f"Booking confirmed for {tickets} ticket(s).")
                 booking_window.destroy()
             except ValueError:
                 messagebox.showerror("Error", "Number of tickets must be a valid number!")
@@ -302,6 +243,8 @@ def find_bus_page():
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
     root.mainloop()
+
+
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")

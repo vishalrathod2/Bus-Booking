@@ -28,7 +28,7 @@ def initialize_db():
     ''')
 
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS bus_new (
+    CREATE TABLE IF NOT EXISTS bus (
         bus_id TEXT PRIMARY KEY,
         bus_type TEXT,
         capacity INTEGER,
@@ -48,6 +48,7 @@ def initialize_db():
             FOREIGN KEY (b_id) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
         )
     ''')
+           
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS booking (
     booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,7 +56,9 @@ def initialize_db():
     run_date DATE NOT NULL,
     user_name TEXT NOT NULL,
     contact TEXT NOT NULL,
-    tickets INTEGER NOT NULL,
+    seat_number INTEGER NOT NULL, -- Add this column for seat numbers
+    UNIQUE (b_id, run_date, seat_number), -- Ensure each seat is booked only once per bus run
+    UNIQUE (b_id, run_date, user_name), -- Ensure each user can book only once per bus run
     FOREIGN KEY (b_id) REFERENCES bus (bus_id)
 );
 
@@ -77,7 +80,6 @@ def initialize_db():
 
     conn.commit()
     conn.close()
-
 def check_booking_gui():
     messagebox.showinfo("Info", "Check Booking feature coming soon!")
 
@@ -159,7 +161,7 @@ def find_bus_page():
         def book_ticket():
             selected_item = tree.focus()
             if not selected_item:
-                messagebox.showerror("Error", "Please select a bus to book tickets!")
+                messagebox.showerror("Error", "Please select a bus to book a seat!")
                 return
 
             bus_details = tree.item(selected_item, "values")
@@ -173,6 +175,7 @@ def find_bus_page():
 
     def open_booking_form(bus_details, travel_date):
         bus_id, bus_type, capacity, run_date, seats_available = bus_details
+        seats_available = int(seats_available)
 
         booking_window = tk.Toplevel(root)
         booking_window.title("Book Ticket")
@@ -183,6 +186,20 @@ def find_bus_page():
         tk.Label(booking_window, text=f"Bus ID: {bus_id}", font=("Arial", 12)).pack(pady=5)
         tk.Label(booking_window, text=f"Seats Available: {seats_available}", font=("Arial", 12)).pack(pady=5)
 
+        # Create a frame for seat selection
+        seat_frame = tk.Frame(booking_window)
+        seat_frame.pack(pady=10)
+
+        # Create buttons for each seat
+        for seat_num in range(1, seats_available + 1):
+            tk.Button(
+                seat_frame, 
+                text=f"Seat {seat_num}", 
+                font=("Arial", 10), 
+                width=8,
+                command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num)
+            ).pack(side=tk.LEFT, padx=5, pady=5)
+
         tk.Label(booking_window, text="User Name:", font=("Arial", 12)).pack(pady=5)
         user_name_entry = tk.Entry(booking_window, font=("Arial", 12))
         user_name_entry.pack(pady=5)
@@ -191,60 +208,57 @@ def find_bus_page():
         contact_entry = tk.Entry(booking_window, font=("Arial", 12))
         contact_entry.pack(pady=5)
 
-        tk.Label(booking_window, text="Number of Tickets:", font=("Arial", 12)).pack(pady=5)
-        tickets_entry = tk.Entry(booking_window, font=("Arial", 12))
-        tickets_entry.pack(pady=5)
-
-        def confirm_booking():
+        def confirm_booking(bus_id, travel_date, seat_number):
             user_name = user_name_entry.get().strip()
             contact = contact_entry.get().strip()
-            tickets = tickets_entry.get().strip()
 
-            if not user_name or not contact or not tickets:
+            if not user_name or not contact:
                 messagebox.showerror("Error", "All fields are required!")
                 return
 
             try:
-                tickets = int(tickets)
-                if tickets <= 0:
-                    messagebox.showerror("Error", "Number of tickets must be greater than 0!")
-                    return
-
-                if tickets > int(seats_available):
-                    messagebox.showerror("Error", f"Only {seats_available} seats are available. Please adjust your ticket count.")
-                    return
-
                 conn = sqlite3.connect("bus_reservation.db")
                 cursor = conn.cursor()
 
+                # Check if the seat is already booked
                 cursor.execute('''
-                INSERT INTO booking (b_id, run_date, user_name, contact, tickets)
-                VALUES (?, ?, ?, ?, ?)
-                ''', (bus_id, travel_date, user_name, contact, tickets))
+                    SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?
+                ''', (bus_id, travel_date, seat_number))
+                existing_seat = cursor.fetchone()
 
+                if existing_seat:
+                    messagebox.showerror("Error", f"Seat {seat_number} is already booked.")
+                    conn.close()
+                    return
+
+                # Check if the user already booked a seat
                 cursor.execute('''
-                    UPDATE running
-                    SET seat_avail = seat_avail - ?
-                    WHERE b_id = ? AND run_date = ?
-                ''', (tickets, bus_id, travel_date))
+                    SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND user_name = ?
+                ''', (bus_id, travel_date, user_name))
+                existing_user = cursor.fetchone()
+
+                if existing_user:
+                    messagebox.showerror("Error", "You have already booked a seat on this bus.")
+                    conn.close()
+                    return
+
+                # Insert the booking
+                cursor.execute('''
+                    INSERT INTO booking (b_id, run_date, user_name, contact, seat_number)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (bus_id, travel_date, user_name, contact, seat_number))
 
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Success", f"Booking confirmed for {tickets} ticket(s).")
+                messagebox.showinfo("Success", f"Booking confirmed for Seat {seat_number}.")
                 booking_window.destroy()
-            except ValueError:
-                messagebox.showerror("Error", "Number of tickets must be a valid number!")
             except Exception as e:
                 messagebox.showerror("Error", f"An error occurred: {e}")
-
-        tk.Button(booking_window, text="Confirm Booking", font=("Arial", 12), command=confirm_booking).pack(pady=20)
 
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
     root.mainloop()
-
-
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")
@@ -464,9 +478,19 @@ def new_bus_gui():
             cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
+            INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
+            from datetime import datetime, timedelta
+            today = datetime.today()
+            for i in range(7):  # Next 7 days
+              run_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+              cursor.execute('''
+                INSERT INTO running (b_id, run_date, seat_avail)
+                VALUES (?, ?, ?)
+            ''', (bus_id, run_date, capacity))
+
+
 
             conn.commit()
             conn.close()
@@ -717,16 +741,16 @@ def new_run_gui():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
-            cursor.execute('''
-                UPDATE running
-                SET seat_avail = ?
-                WHERE b_id = ? AND run_date = ?
-            ''', (seat_avail, b_id, run_date))
-
-            if cursor.rowcount == 0:
-                messagebox.showerror("Error", "Bus ID or Run Date not found!")
-            else:
+            cursor.execute('SELECT * FROM running WHERE b_id = ? AND run_date = ?', (b_id, run_date))
+            if cursor.fetchone():
+                cursor.execute('''
+                    UPDATE running
+                    SET seat_avail = ?
+                    WHERE b_id = ? AND run_date = ?
+                ''', (seat_avail, b_id, run_date))
                 messagebox.showinfo("Success", "Running bus updated successfully!")
+            else:
+                messagebox.showerror("Error", "Bus ID or Run Date not found!")
 
             conn.commit()
             conn.close()
@@ -769,9 +793,12 @@ def new_run_gui():
                 text_area.insert(tk.END, "No running buses found.")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
+
     tk.Button(run_window, text="Add Running Bus", font=("Arial", 12), command=add_running).grid(row=3, column=0, pady=20)
     tk.Button(run_window, text="Edit Running Bus", font=("Arial", 12), command=edit_running).grid(row=4, column=0, pady=20)
     tk.Button(run_window, text="Show All Running Buses", font=("Arial", 12), command=show_all_running).grid(row=5, column=0, pady=20)
+
+# Main application
 def main():
     initialize_db()
 
@@ -779,7 +806,7 @@ def main():
     root.title("Bus Reservation System")
     root.geometry("600x500") 
 
-    image = PhotoImage(file="C:\\Users\\ratho\\OneDrive\\Desktop\\bus booking\\Bus-Booking\\Bus_for_project.png")
+    image = PhotoImage(file="Bus_for_project.png")
     image_label = tk.Label(root, image=image)
     image_label.place(relx=0.5, rely=0.2, anchor='center')
     tk.Button(root, text="Check Booking", font=("Arial", 14), command=check_booking_gui).place(relx=0.5, rely=0.5, anchor='center')
@@ -787,7 +814,6 @@ def main():
     tk.Button(root, text="Admin", font=("Arial", 14), command=admin_gui).place(relx=0.5, rely=0.7, anchor='center')
 
     root.mainloop()
-
 if __name__ == "__main__":
     main()
 

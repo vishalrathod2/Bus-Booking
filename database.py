@@ -81,8 +81,71 @@ def initialize_db():
     conn.commit()
     conn.close()
 def check_booking_gui():
-    messagebox.showinfo("Info", "Check Booking feature coming soon!")
+    # Main window for checking bookings
+    root = tk.Tk()
+    root.title("Check Booking")
+    root.geometry("400x300")
 
+    tk.Label(root, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
+
+    tk.Label(root, text="Enter Contact Number:", font=("Arial", 12)).pack(pady=5)
+    contact_entry = tk.Entry(root, font=("Arial", 12), width=30)
+    contact_entry.pack(pady=5)
+
+    def check_booking():
+        contact = contact_entry.get().strip()
+        if not contact:
+            messagebox.showerror("Error", "Contact number is required!")
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Query to check bookings by contact
+            cursor.execute("""
+            SELECT 
+                b.booking_id, b.b_id, b.run_date, b.user_name, b.seat_number, bus.bus_type 
+            FROM 
+                booking b
+            JOIN 
+                bus ON b.b_id = bus.bus_id
+            WHERE 
+                b.contact = ?;
+            """, (contact,))
+            bookings = cursor.fetchall()
+            conn.close()
+
+            if bookings:
+                display_bookings(bookings)
+            else:
+                messagebox.showinfo("No Bookings Found", "No bookings found for this contact number.")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+
+    def display_bookings(bookings):
+        booking_window = tk.Toplevel(root)
+        booking_window.title("Booking Details")
+        booking_window.geometry("600x300")
+
+        tk.Label(booking_window, text="Your Bookings", font=("Arial", 16, "bold")).pack(pady=10)
+
+        columns = ("Booking ID", "Bus ID", "Run Date", "User Name", "Seat Number", "Bus Type")
+        tree = ttk.Treeview(booking_window, columns=columns, show="headings", height=10)
+        tree.pack(fill=tk.BOTH, expand=True)
+
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, width=100)
+
+        for booking in bookings:
+            tree.insert("", tk.END, values=booking)
+
+        tk.Button(booking_window, text="Close", font=("Arial", 12), command=booking_window.destroy).pack(pady=10)
+
+    tk.Button(root, text="Check Booking", font=("Arial", 14, "bold"), command=check_booking, bg="blue", fg="white").pack(pady=20)
+
+    root.mainloop()
 def find_bus_page():
     # Main window
     root = tk.Tk()
@@ -177,12 +240,11 @@ def find_bus_page():
         bus_id, bus_type, capacity, run_date, seats_available = bus_details
         seats_available = int(seats_available)
 
-        booking_window = tk.Toplevel(root)
+        booking_window = tk.Toplevel()
         booking_window.title("Book Ticket")
         booking_window.geometry("400x400")
 
         tk.Label(booking_window, text="Book Ticket", font=("Arial", 20, "bold")).pack(pady=10)
-
         tk.Label(booking_window, text=f"Bus ID: {bus_id}", font=("Arial", 12)).pack(pady=5)
         tk.Label(booking_window, text=f"Seats Available: {seats_available}", font=("Arial", 12)).pack(pady=5)
 
@@ -190,15 +252,30 @@ def find_bus_page():
         seat_frame = tk.Frame(booking_window)
         seat_frame.pack(pady=10)
 
+        # Function to check booked seats
+        def get_booked_seats():
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Get the list of already booked seat numbers
+            cursor.execute('''SELECT seat_number FROM booking WHERE b_id = ? AND run_date = ?''', (bus_id, travel_date))
+            booked_seats = cursor.fetchall()
+            conn.close()
+
+            return {seat[0] for seat in booked_seats}
+
+        # Get the booked seats
+        booked_seats = get_booked_seats()
+
         # Create buttons for each seat
+        seat_buttons = []
         for seat_num in range(1, seats_available + 1):
-            tk.Button(
-                seat_frame, 
-                text=f"Seat {seat_num}", 
-                font=("Arial", 10), 
-                width=8,
-                command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num)
-            ).pack(side=tk.LEFT, padx=5, pady=5)
+            # Disable the button if the seat is already booked
+            seat_button = tk.Button(seat_frame, text=f"Seat {seat_num}", font=("Arial", 10), width=8,
+                                    state="disabled" if seat_num in booked_seats else "normal",
+                                    command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num))
+            seat_button.pack(side=tk.LEFT, padx=5, pady=5)
+            seat_buttons.append(seat_button)
 
         tk.Label(booking_window, text="User Name:", font=("Arial", 12)).pack(pady=5)
         user_name_entry = tk.Entry(booking_window, font=("Arial", 12))
@@ -208,6 +285,7 @@ def find_bus_page():
         contact_entry = tk.Entry(booking_window, font=("Arial", 12))
         contact_entry.pack(pady=5)
 
+        # Function to confirm booking
         def confirm_booking(bus_id, travel_date, seat_number):
             user_name = user_name_entry.get().strip()
             contact = contact_entry.get().strip()
@@ -220,41 +298,39 @@ def find_bus_page():
                 conn = sqlite3.connect("bus_reservation.db")
                 cursor = conn.cursor()
 
-                # Check if the seat is already booked
-                cursor.execute('''
-                    SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?
-                ''', (bus_id, travel_date, seat_number))
-                existing_seat = cursor.fetchone()
+                # Check if the user has already booked a seat
+                cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND user_name = ?''', 
+                               (bus_id, travel_date, user_name))
+                existing_booking = cursor.fetchone()
 
-                if existing_seat:
-                    messagebox.showerror("Error", f"Seat {seat_number} is already booked.")
-                    conn.close()
-                    return
-
-                # Check if the user already booked a seat
-                cursor.execute('''
-                    SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND user_name = ?
-                ''', (bus_id, travel_date, user_name))
-                existing_user = cursor.fetchone()
-
-                if existing_user:
+                if existing_booking:
                     messagebox.showerror("Error", "You have already booked a seat on this bus.")
                     conn.close()
                     return
 
                 # Insert the booking
-                cursor.execute('''
-                    INSERT INTO booking (b_id, run_date, user_name, contact, seat_number)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (bus_id, travel_date, user_name, contact, seat_number))
+                cursor.execute('''INSERT INTO booking (b_id, run_date, user_name, contact, seat_number)
+                                VALUES (?, ?, ?, ?, ?)''', (bus_id, travel_date, user_name, contact, seat_number))
+
+                # Update the seat availability
+                cursor.execute('''UPDATE running SET seat_avail = seat_avail - 1 WHERE b_id = ? AND run_date = ?''',
+                               (bus_id, travel_date))
 
                 conn.commit()
                 conn.close()
 
                 messagebox.showinfo("Success", f"Booking confirmed for Seat {seat_number}.")
                 booking_window.destroy()
+
+                # Disable the booked seat button
+                seat_buttons[seat_number - 1].config(state="disabled")
+                booking_window.destroy()
+
+  
             except Exception as e:
                 messagebox.showerror("Error", f"An error occurred: {e}")
+
+       # tk.Button(booking_window, text="Confirm Booking", font=("Arial", 12), command=confirm_booking).pack(pady=20)
 
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 

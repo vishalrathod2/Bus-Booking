@@ -63,21 +63,7 @@ def initialize_db():
 );
 
     ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS booking_history (
-            name TEXT,
-            gender TEXT CHECK(gender IN ('M', 'F', 'O')),
-            no_of_seat INTEGER,
-            phone TEXT CHECK(length(phone) = 10),
-            age INTEGER,
-            booking_ref TEXT PRIMARY KEY,
-            booking_date DATE,
-            travel_date DATE,
-            bid TEXT,
-            FOREIGN KEY (bid) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
-        )
-    ''')
-
+   
     conn.commit()
     conn.close()
 def check_booking_gui():

@@ -58,7 +58,7 @@ def initialize_db():
     contact TEXT NOT NULL,
     seat_number INTEGER NOT NULL, -- Add this column for seat numbers
     UNIQUE (b_id, run_date, seat_number), -- Ensure each seat is booked only once per bus run
-    UNIQUE (b_id, run_date, user_name), -- Ensure each user can book only once per bus run
+    UNIQUE (b_id, run_date), -- Ensure each user can book only once per bus run
     FOREIGN KEY (b_id) REFERENCES bus (bus_id)
 );
 
@@ -236,7 +236,7 @@ def find_bus_page():
 
         # Create a frame for seat selection
         seat_frame = tk.Frame(booking_window)
-        seat_frame.pack(pady=10)
+        seat_frame.pack(pady=20)
 
         # Function to check booked seats
         def get_booked_seats():
@@ -255,12 +255,22 @@ def find_bus_page():
 
         # Create buttons for each seat
         seat_buttons = []
+        rows = 5
+        cloumns = 8
         for seat_num in range(1, seats_available + 1):
+            row = (seat_num - 1) // cloumns
+            column = (seat_num - 1) % cloumns
+            if seat_num in booked_seats:
+                button_state = "disabled"
+                button_color = "red"
+            else:
+                button_state = "normal"
+                button_color = "green"
             # Disable the button if the seat is already booked
-            seat_button = tk.Button(seat_frame, text=f"Seat {seat_num}", font=("Arial", 10), width=8,
-                                    state="disabled" if seat_num in booked_seats else "normal",
+            seat_button = tk.Button(seat_frame, text=f"Seat {seat_num}", font=("Arial", 10), width=8, height=2,
+                                    state=button_state,bg=button_color,
                                     command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num))
-            seat_button.pack(side=tk.LEFT, padx=5, pady=5)
+            seat_button.grid(row=row, column=column, padx=5, pady=5)
             seat_buttons.append(seat_button)
 
         tk.Label(booking_window, text="User Name:", font=("Arial", 12)).pack(pady=5)
@@ -285,6 +295,10 @@ def find_bus_page():
                 cursor = conn.cursor()
 
                 # Check if the user has already booked a seat
+                # cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?''',
+                #                (bus_id, travel_date, seat_number))
+                # existing_booking = cursor.fetchone()
+
                 cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND user_name = ?''', 
                                (bus_id, travel_date, user_name))
                 existing_booking = cursor.fetchone()
@@ -309,18 +323,19 @@ def find_bus_page():
                 booking_window.destroy()
 
                 # Disable the booked seat button
-                seat_buttons[seat_number - 1].config(state="disabled")
+                seat_buttons[seat_number - 1].config(state="disabled",bg="red")
                 booking_window.destroy()
 
   
             except Exception as e:
-                messagebox.showerror("Error", f"An error occurred: {e}")
+                messagebox.showerror
 
        # tk.Button(booking_window, text="Confirm Booking", font=("Arial", 12), command=confirm_booking).pack(pady=20)
-
+            
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
     root.mainloop()
+         
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")

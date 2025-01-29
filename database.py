@@ -339,11 +339,13 @@ def admin_gui():
     admin_window.title("Admin Panel")
     admin_window.geometry("400x400")  
 
-    tk.Button(admin_window, text="New Operator", font=("Arial", 14), command=new_operator_gui).place(relx=0.5, rely=0.3, anchor='center')
-    tk.Button(admin_window, text="New Bus", font=("Arial", 14), command=new_bus_gui).place(relx=0.5, rely=0.45, anchor='center')
-    tk.Button(admin_window, text="New Route", font=("Arial", 14), command=new_route_gui).place(relx=0.5, rely=0.6, anchor='center')
-    tk.Button(admin_window, text="New Run", font=("Arial", 14), command=new_run_gui).place(relx=0.5, rely=0.75, anchor='center')
+    # Button styles with background and foreground colors
+    tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.5, rely=0.3, anchor='center')
+    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.5, rely=0.45, anchor='center')
+    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.5, rely=0.6, anchor='center')
+    tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.5, rely=0.75, anchor='center')
 
+    admin_window.mainloop()
 
 def new_operator_gui():
     operator_window = tk.Toplevel()
@@ -879,16 +881,28 @@ def main():
 
     root = tk.Tk()
     root.title("Bus Reservation System")
-    root.geometry("600x500") 
+
+    # Set the window to full screen
+    root.attributes("-fullscreen", True)
+
+    # You can also handle the escape key to exit full-screen mode
+    root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))
+
+    # Set background color for the root window
+    root.configure(bg="#F0F0F0")  # Light grey background for the window
 
     image = PhotoImage(file="Bus_for_project.png")
-    image_label = tk.Label(root, image=image)
-    image_label.place(relx=0.5, rely=0.2, anchor='center')
-    tk.Button(root, text="Check Booking", font=("Arial", 14), command=check_booking_gui).place(relx=0.5, rely=0.5, anchor='center')
-    tk.Button(root, text="Find Bus", font=("Arial", 14), command=find_bus_page).place(relx=0.5, rely=0.6, anchor='center')
-    tk.Button(root, text="Admin", font=("Arial", 14), command=admin_gui).place(relx=0.5, rely=0.7, anchor='center')
+    image_label = tk.Label(root, image=image, bg="#F0F0F0")  # Background color for label
+    image_label.place(relx=0.5, rely=0.2, anchor='center')  # Image centered at the top
+
+    # Customize button colors
+    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui).place(relx=0.33, rely=0.5, anchor='center')
+    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page).place(relx=0.5, rely=0.5, anchor='center')
+    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui).place(relx=0.67, rely=0.5, anchor='center')
+
+    # Exit button, centered below the other buttons
+    tk.Button(root, text="Exit", font=("Arial", 14), bg="#F44336", fg="white", command=root.quit).place(relx=0.5, rely=0.7, anchor='center')
 
     root.mainloop()
 if __name__ == "__main__":
     main()
-

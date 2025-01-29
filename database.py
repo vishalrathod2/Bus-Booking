@@ -224,11 +224,11 @@ def find_bus_page():
 
     def open_booking_form(bus_details, travel_date):
         bus_id, bus_type, capacity, run_date, seats_available = bus_details
-        seats_available = int(seats_available)
+        capacity = int (capacity)
 
         booking_window = tk.Toplevel()
         booking_window.title("Book Ticket")
-        booking_window.geometry("400x400")
+        booking_window.geometry("600x500")
 
         tk.Label(booking_window, text="Book Ticket", font=("Arial", 20, "bold")).pack(pady=10)
         tk.Label(booking_window, text=f"Bus ID: {bus_id}", font=("Arial", 12)).pack(pady=5)
@@ -236,43 +236,42 @@ def find_bus_page():
 
         # Create a frame for seat selection
         seat_frame = tk.Frame(booking_window)
-        seat_frame.pack(pady=20)
+        seat_frame.pack(pady=10)
 
-        # Function to check booked seats
         def get_booked_seats():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
-            # Get the list of already booked seat numbers
             cursor.execute('''SELECT seat_number FROM booking WHERE b_id = ? AND run_date = ?''', (bus_id, travel_date))
-            booked_seats = cursor.fetchall()
+            booked_seats ={seat[0] for seat in cursor.fetchall()}
             conn.close()
-
-            return {seat[0] for seat in booked_seats}
+            return booked_seats
 
         # Get the booked seats
         booked_seats = get_booked_seats()
 
         # Create buttons for each seat
-        seat_buttons = []
-        rows = 5
-        cloumns = 8
-        for seat_num in range(1, seats_available + 1):
-            row = (seat_num - 1) // cloumns
-            column = (seat_num - 1) % cloumns
-            if seat_num in booked_seats:
-                button_state = "disabled"
-                button_color = "red"
-            else:
-                button_state = "normal"
-                button_color = "green"
-            # Disable the button if the seat is already booked
-            seat_button = tk.Button(seat_frame, text=f"Seat {seat_num}", font=("Arial", 10), width=8, height=2,
-                                    state=button_state,bg=button_color,
-                                    command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num))
-            seat_button.grid(row=row, column=column, padx=5, pady=5)
-            seat_buttons.append(seat_button)
-
+        cols = 5
+        rows = (capacity // cols) + (1 if capacity % cols != 0 else 0)
+        seat_buttons = {}
+        for r in range(rows):
+            for c in range(cols):
+                seat_num = (r * cols) + (c + 1)
+                if seat_num > capacity:  # Stop if we exceed the available seats
+                  break
+                is_booked = seat_num in booked_seats
+                seat_button = tk.Button(
+                  seat_frame,
+                  text=f"{seat_num}",
+                  font=("Arial", 10),
+                  width=5,
+                  bg="red" if is_booked else "green",
+                  fg="white",
+                  state="disabled" if is_booked else "normal",
+                  command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num)
+                 )
+                seat_button.grid(row=r, column=c, padx=5, pady=5)  # Arrange in grid layout
+                seat_buttons[seat_num ] = seat_button  # Store the button in the list
+                seat_num += 1
         tk.Label(booking_window, text="User Name:", font=("Arial", 12)).pack(pady=5)
         user_name_entry = tk.Entry(booking_window, font=("Arial", 12))
         user_name_entry.pack(pady=5)
@@ -299,22 +298,21 @@ def find_bus_page():
                 #                (bus_id, travel_date, seat_number))
                 # existing_booking = cursor.fetchone()
 
-                cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND user_name = ?''', 
-                               (bus_id, travel_date, user_name))
+                cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?''', 
+                               (bus_id, travel_date, seat_number))
                 existing_booking = cursor.fetchone()
 
                 if existing_booking:
-                    messagebox.showerror("Error", "You have already booked a seat on this bus.")
+                    messagebox.showerror("Error", f"Seat {seat_number} is already booked!")
                     conn.close()
                     return
 
                 # Insert the booking
                 cursor.execute('''INSERT INTO booking (b_id, run_date, user_name, contact, seat_number)
-                                VALUES (?, ?, ?, ?, ?)''', (bus_id, travel_date, user_name, contact, seat_number))
-
+                            VALUES (?, ?, ?, ?, ?)''', (bus_id, travel_date, user_name, contact, seat_number))
                 # Update the seat availability
                 cursor.execute('''UPDATE running SET seat_avail = seat_avail - 1 WHERE b_id = ? AND run_date = ?''',
-                               (bus_id, travel_date))
+                           (bus_id, travel_date))
 
                 conn.commit()
                 conn.close()

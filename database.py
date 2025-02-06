@@ -11,57 +11,56 @@ def initialize_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS operator (
             opr_id TEXT PRIMARY KEY,
-            name TEXT,
+            name TEXT NOT NULL,
             address TEXT,
             phone TEXT CHECK(length(phone) = 10),
-            email TEXT
+            email TEXT UNIQUE
         )
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS route (
             r_id TEXT PRIMARY KEY,
-            s_name TEXT,
-            s_id TEXT,
-            e_name TEXT,
-            e_id TEXT
+            s_name TEXT NOT NULL,
+            s_id TEXT NOT NULL,
+            e_name TEXT NOT NULL,
+            e_id TEXT NOT NULL
         )
     ''')
 
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS bus (
-        bus_id TEXT PRIMARY KEY,
-        bus_type TEXT,
-        capacity INTEGER,
-        op_id TEXT NOT NULL,
-        route_id TEXT NOT NULL,
-        FOREIGN KEY (op_id) REFERENCES operator (opr_id) ON DELETE CASCADE ON UPDATE CASCADE,
-        FOREIGN KEY (route_id) REFERENCES route (r_id) ON DELETE CASCADE ON UPDATE CASCADE
-    )
-''')
+        CREATE TABLE IF NOT EXISTS bus (
+            bus_id TEXT PRIMARY KEY,
+            bus_type TEXT NOT NULL,
+            capacity INTEGER NOT NULL CHECK(capacity > 0),
+            op_id TEXT NOT NULL,
+            route_id TEXT NOT NULL,
+            FOREIGN KEY (op_id) REFERENCES operator (opr_id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY (route_id) REFERENCES route (r_id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
+    ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS running (
-            b_id TEXT,
-            run_date DATE,
-            seat_avail INTEGER,
+            b_id TEXT NOT NULL,
+            run_date DATE NOT NULL,
+            seat_avail INTEGER NOT NULL CHECK(seat_avail >= 0),
             PRIMARY KEY (b_id, run_date),
             FOREIGN KEY (b_id) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
         )
     ''')
            
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS booking (
-    booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    b_id TEXT NOT NULL,
-    run_date DATE NOT NULL,
-    user_name TEXT NOT NULL,
-    contact TEXT NOT NULL,
-    seat_number INTEGER NOT NULL, -- Add this column for seat numbers
-    UNIQUE (b_id, run_date, seat_number), -- Ensure each seat is booked only once per bus run
-    UNIQUE (b_id, run_date), -- Ensure each user can book only once per bus run
-    FOREIGN KEY (b_id) REFERENCES bus (bus_id)
-);
-
+        CREATE TABLE IF NOT EXISTS booking (
+            booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            b_id TEXT NOT NULL,
+            run_date DATE NOT NULL,
+            user_name TEXT NOT NULL,
+            contact TEXT NOT NULL CHECK(length(contact) = 10),
+            seat_number INTEGER NOT NULL CHECK(seat_number > 0),
+            UNIQUE (b_id, run_date, seat_number),  -- Ensure each seat is booked only once per bus run
+            UNIQUE (b_id, run_date, user_name, contact),  -- Ensure one user cannot book multiple times per run
+            FOREIGN KEY (b_id) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
+        )
     ''')
    
     conn.commit()

@@ -336,12 +336,12 @@ def find_bus_page():
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")
-    admin_window.geometry("400x400")  
+    admin_window.geometry("1550x900")  
 
     # Button styles with background and foreground colors
     tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.5, rely=0.3, anchor='center')
-    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.5, rely=0.45, anchor='center')
-    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.5, rely=0.6, anchor='center')
+    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.5, rely=0.6, anchor='center')
+    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.5, rely=0.45, anchor='center')
     tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.5, rely=0.75, anchor='center')
 
     admin_window.mainloop()

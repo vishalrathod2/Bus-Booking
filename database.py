@@ -70,6 +70,7 @@ def check_booking_gui():
     root = tk.Tk()
     root.title("Check Booking")
     root.geometry("400x300")
+    
 
     tk.Label(root, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
 
@@ -325,10 +326,7 @@ def find_bus_page():
 
   
             except Exception as e:
-                messagebox.showerror
-
-       # tk.Button(booking_window, text="Confirm Booking", font=("Arial", 12), command=confirm_booking).pack(pady=20)
-            
+                messagebox.showerror            
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
     root.mainloop()
@@ -336,13 +334,17 @@ def find_bus_page():
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")
-    admin_window.geometry("1550x900")  
+    admin_window.geometry("1550x900")
 
-    # Button styles with background and foreground colors
-    tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.5, rely=0.3, anchor='center')
-    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.5, rely=0.6, anchor='center')
-    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.5, rely=0.45, anchor='center')
-    tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.5, rely=0.75, anchor='center')
+    
+    tk.Label(admin_window, text="Admin Panel", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
+    image = PhotoImage(file="Bus_for_project.png")
+    tk.Label(admin_window, image=image).place(relx=0.5, rely=0.2, anchor='center')
+
+    tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.2, rely=0.5, anchor='center')
+    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.4, rely=0.5, anchor='center')
+    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.6, rely=0.5, anchor='center')
+    tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.8, rely=0.5, anchor='center')
 
     admin_window.mainloop()
 
@@ -480,6 +482,7 @@ def new_bus_gui():
     bus_window = tk.Toplevel()
     bus_window.title("Manage Buses")
     bus_window.geometry("800x600") 
+    
 
     tk.Label(bus_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
     tk.Label(bus_window, text="Bus Type:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
@@ -572,8 +575,7 @@ def new_bus_gui():
             conn.close()
 
             messagebox.showinfo("Success", "Bus added successfully!")
-            clear_entries()
-            populate_dropdowns()
+            bus_window.destroy()
         except sqlite3.IntegrityError:
             messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!")
         except Exception as e:
@@ -588,6 +590,53 @@ def new_bus_gui():
     tk.Button(bus_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=5, column=1, pady=20)
 
     def show_all_buses():
+        # Create a new window for showing all buses
+        show_window = tk.Toplevel()
+        show_window.title("All Buses")
+        show_window.geometry("900x500")
+        show_window.configure(bg="#f0f0f0")  # Set background color
+
+        # Heading Label
+        tk.Label(show_window, text="Bus Details", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
+
+        # Create a frame for the treeview with padding
+        frame = tk.Frame(show_window, bg="#f0f0f0")
+        frame.pack(pady=10, padx=20, expand=True, fill="both")
+
+        # Define columns
+        columns = ("Bus ID", "Bus Type", "Capacity", "Operator", "Route")
+
+        # Create Treeview widget
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
+        
+        # Define column headings with width
+        tree.heading("Bus ID", text="Bus ID", anchor="center")
+        tree.heading("Bus Type", text="Bus Type", anchor="center")
+        tree.heading("Capacity", text="Capacity", anchor="center")
+        tree.heading("Operator", text="Operator", anchor="center")
+        tree.heading("Route", text="Route", anchor="center")
+
+        # Set column widths and alignments
+        tree.column("Bus ID", width=100, anchor="center")
+        tree.column("Bus Type", width=150, anchor="center")
+        tree.column("Capacity", width=80, anchor="center")
+        tree.column("Operator", width=200, anchor="center")
+        tree.column("Route", width=250, anchor="center")
+
+        # Add striped row styling
+        style = ttk.Style()
+        style.configure("Treeview", font=("Arial", 12), rowheight=25, background="#f9f9f9", foreground="black")
+        style.configure("Treeview.Heading", font=("Arial", 13, "bold"), background="#555555", foreground="black")
+        style.map("Treeview", background=[("selected", "#4CAF50")])
+
+        # Add scrollbar
+        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scroll_y.set)
+        scroll_y.pack(side="right", fill="y")
+        
+        tree.pack(expand=True, fill="both")
+
+        # Fetch bus details from database
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
 
@@ -600,26 +649,15 @@ def new_bus_gui():
         buses = cursor.fetchall()
         conn.close()
 
-        show_window = tk.Toplevel()
-        show_window.title("All Buses")
-        show_window.geometry("800x500")
+        # Insert data into Treeview
+        for bus in buses:
+            tree.insert("", "end", values=bus)
 
-        text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
-        text_area.pack(expand=True, fill=tk.BOTH)
-
-        if buses:
-            for bus in buses:
-                text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
-                text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
-                text_area.insert(tk.END, f"Capacity: {bus[2]}\n")
-                text_area.insert(tk.END, f"Operator: {bus[3]}\n")
-                text_area.insert(tk.END, f"Route: {bus[4]}\n")
-                text_area.insert(tk.END, "-" * 50 + "\n")
-        else:
-            text_area.insert(tk.END, "No buses found.")
-
+        # Button to close the window
+        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
+     
     tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=6, column=0, columnspan=2, pady=10)
-
+  
 def new_route_gui():
     route_window = tk.Toplevel()
     route_window.title("Manage Routes")
@@ -880,15 +918,12 @@ def main():
 
     root = tk.Tk()
     root.title("Bus Reservation System")
-
-    # Set the window to full screen
     root.attributes("-fullscreen", True)
+    root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))        
+    tk.Label(text="Bus Booking", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
 
-    # You can also handle the escape key to exit full-screen mode
-    root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))
 
-    # Set background color for the root window
-    root.configure(bg="#F0F0F0")  # Light grey background for the window
+    root.configure(bg="#F0F0F0")
 
     image = PhotoImage(file="Bus_for_project.png")
     image_label = tk.Label(root, image=image, bg="#F0F0F0")  # Background color for label

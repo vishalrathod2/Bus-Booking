@@ -351,26 +351,38 @@ def admin_gui():
 def new_operator_gui():
     operator_window = tk.Toplevel()
     operator_window.title("Manage Operators")
-    operator_window.geometry("500x450") 
+    operator_window.geometry("600x500")
+    operator_window.configure(bg="#f0f0f0")  # Light background
 
-    tk.Label(operator_window, text="Operator ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(operator_window, text="Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(operator_window, text="Address:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(operator_window, text="Phone:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(operator_window, text="Email:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
+    # ======= Heading Label =======
+    tk.Label(operator_window, text="Manage Operators", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
 
-    opr_id_entry = tk.Entry(operator_window, font=("Arial", 12))
-    name_entry = tk.Entry(operator_window, font=("Arial", 12))
-    address_entry = tk.Entry(operator_window, font=("Arial", 12))
-    phone_entry = tk.Entry(operator_window, font=("Arial", 12))
-    email_entry = tk.Entry(operator_window, font=("Arial", 12))
+    # ======= Main Form Frame =======
+    form_frame = tk.Frame(operator_window, bg="#f0f0f0")
+    form_frame.pack(pady=20, padx=20)
 
-    opr_id_entry.grid(row=0, column=1, padx=10, pady=10)
-    name_entry.grid(row=1, column=1, padx=10, pady=10)
-    address_entry.grid(row=2, column=1, padx=10, pady=10)
-    phone_entry.grid(row=3, column=1, padx=10, pady=10)
-    email_entry.grid(row=4, column=1, padx=10, pady=10)
+    # ======= Labels & Entries =======
+    tk.Label(form_frame, text="Operator ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    opr_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    opr_id_entry.grid(row=0, column=1, padx=10, pady=5)
 
+    tk.Label(form_frame, text="Name:", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    name_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    name_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="Address:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    address_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    address_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="Phone:", font=("Arial", 12), bg="#f0f0f0").grid(row=3, column=0, padx=10, pady=5, sticky="w")
+    phone_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    phone_entry.grid(row=3, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="Email:", font=("Arial", 12), bg="#f0f0f0").grid(row=4, column=0, padx=10, pady=5, sticky="w")
+    email_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    email_entry.grid(row=4, column=1, padx=10, pady=5)
+
+    # ======= Add Operator Logic =======
     def add_operator():
         opr_id = opr_id_entry.get().strip()
         name = name_entry.get().strip()
@@ -389,12 +401,10 @@ def new_operator_gui():
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
             cursor.execute('''
                 INSERT INTO operator (opr_id, name, address, phone, email)
                 VALUES (?, ?, ?, ?, ?)
             ''', (opr_id, name, address, phone, email))
-
             conn.commit()
             conn.close()
 
@@ -405,6 +415,7 @@ def new_operator_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Edit Operator Logic =======
     def edit_operator():
         opr_id = opr_id_entry.get().strip()
         name = name_entry.get().strip()
@@ -423,11 +434,8 @@ def new_operator_gui():
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
             cursor.execute('''
-                UPDATE operator
-                SET name = ?, address = ?, phone = ?, email = ?
-                WHERE opr_id = ?
+                UPDATE operator SET name=?, address=?, phone=?, email=? WHERE opr_id=?
             ''', (name, address, phone, email, opr_id))
 
             if cursor.rowcount == 0:
@@ -441,6 +449,7 @@ def new_operator_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Clear Entries =======
     def clear_entries():
         opr_id_entry.delete(0, tk.END)
         name_entry.delete(0, tk.END)
@@ -448,35 +457,63 @@ def new_operator_gui():
         phone_entry.delete(0, tk.END)
         email_entry.delete(0, tk.END)
 
+    # ======= Show All Operators (Treeview) =======
     def show_all_operators():
+        show_window = tk.Toplevel()
+        show_window.title("All Operators")
+        show_window.geometry("900x600")
+        show_window.configure(bg="#f0f0f0")
+
+        # Table Frame
+        frame = tk.Frame(show_window, bg="#f0f0f0")
+        frame.pack(pady=10, padx=20, expand=True, fill="both")
+
+        # Treeview Table
+        columns = ("Operator ID", "Name", "Address", "Phone", "Email")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
+
+        # Column Headings
+        for col in columns:
+            tree.heading(col, text=col, anchor="center")
+            tree.column(col, width=140, anchor="center")
+
+        # Scrollbar
+        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scroll_y.set)
+        scroll_y.pack(side="right", fill="y")
+
+        tree.pack(expand=True, fill="both")
+
+        # Fetch data
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
-
         cursor.execute("SELECT * FROM operator")
         operators = cursor.fetchall()
         conn.close()
 
-        show_window = tk.Toplevel()
-        show_window.title("All Operators")
-        show_window.geometry("600x400")
+        # Insert data into Treeview
+        for operator in operators:
+            tree.insert("", "end", values=operator)
 
-        text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
-        text_area.pack(expand=True, fill=tk.BOTH)
+        # Close Button
+        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
 
-        if operators:
-            for operator in operators:
-                text_area.insert(tk.END, f"Operator ID: {operator[0]}\n")
-                text_area.insert(tk.END, f"Name: {operator[1]}\n")
-                text_area.insert(tk.END, f"Address: {operator[2]}\n")
-                text_area.insert(tk.END, f"Phone: {operator[3]}\n")
-                text_area.insert(tk.END, f"Email: {operator[4]}\n")
-                text_area.insert(tk.END, "-" * 40 + "\n")
-        else:
-            text_area.insert(tk.END, "No operators found.")
+    # ======= Buttons (Styled) =======
+    button_frame = tk.Frame(operator_window, bg="#f0f0f0")
+    button_frame.pack(pady=10)
 
-    tk.Button(operator_window, text="Add Operator", font=("Arial", 12), command=add_operator).grid(row=5, column=0, pady=20)
-    tk.Button(operator_window, text="Edit Operator", font=("Arial", 12), command=edit_operator).grid(row=5, column=1, pady=20)
-    tk.Button(operator_window, text="Show All Operators", font=("Arial", 12), command=show_all_operators).grid(row=6, column=0, columnspan=2, pady=10)
+    tk.Button(button_frame, text="Add Operator", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white",
+              command=add_operator, width=12, relief="raised", bd=2).grid(row=0, column=0, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Edit Operator", font=("Arial", 12, "bold"), bg="#2196F3", fg="white",
+              command=edit_operator, width=12, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Show All", font=("Arial", 12, "bold"), bg="#FF9800", fg="white",
+              command=show_all_operators, width=12, relief="raised", bd=2).grid(row=0, column=2, padx=10, pady=10)
+
+    # Close Button
+    tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
+              command=operator_window.destroy, width=12, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
 
 def new_bus_gui():
     bus_window = tk.Toplevel()
@@ -640,26 +677,38 @@ def new_bus_gui():
 def new_route_gui():
     route_window = tk.Toplevel()
     route_window.title("Manage Routes")
-    route_window.geometry("800x600")
+    route_window.geometry("600x500")
+    route_window.configure(bg="#f0f0f0")  # Light background
 
-    tk.Label(route_window, text="Route ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(route_window, text="Start Location Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(route_window, text="Start Location ID:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(route_window, text="End Location Name:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(route_window, text="End Location ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
+    # ======= Heading Label =======
+    tk.Label(route_window, text="Manage Routes", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
 
-    route_id_entry = tk.Entry(route_window, font=("Arial", 12))
-    start_name_entry = tk.Entry(route_window, font=("Arial", 12))
-    start_id_entry = tk.Entry(route_window, font=("Arial", 12))
-    end_name_entry = tk.Entry(route_window, font=("Arial", 12))
-    end_id_entry = tk.Entry(route_window, font=("Arial", 12))
+    # ======= Main Form Frame =======
+    form_frame = tk.Frame(route_window, bg="#f0f0f0")
+    form_frame.pack(pady=20, padx=20)
 
-    route_id_entry.grid(row=0, column=1, padx=10, pady=10)
-    start_name_entry.grid(row=1, column=1, padx=10, pady=10)
-    start_id_entry.grid(row=2, column=1, padx=10, pady=10)
-    end_name_entry.grid(row=3, column=1, padx=10, pady=10)
-    end_id_entry.grid(row=4, column=1, padx=10, pady=10)
+    # ======= Labels & Entries =======
+    tk.Label(form_frame, text="Route ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    route_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    route_id_entry.grid(row=0, column=1, padx=10, pady=5)
 
+    tk.Label(form_frame, text="Start Location Name:", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    start_name_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    start_name_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="Start Location ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    start_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    start_id_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="End Location Name:", font=("Arial", 12), bg="#f0f0f0").grid(row=3, column=0, padx=10, pady=5, sticky="w")
+    end_name_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    end_name_entry.grid(row=3, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="End Location ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=4, column=0, padx=10, pady=5, sticky="w")
+    end_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    end_id_entry.grid(row=4, column=1, padx=10, pady=5)
+
+    # ======= Add Route Logic =======
     def add_route():
         r_id = route_id_entry.get().strip()
         s_name = start_name_entry.get().strip()
@@ -678,12 +727,10 @@ def new_route_gui():
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
             cursor.execute('''
                 INSERT INTO route (r_id, s_name, s_id, e_name, e_id)
                 VALUES (?, ?, ?, ?, ?)
             ''', (r_id, s_name, s_id, e_name, e_id))
-
             conn.commit()
             conn.close()
 
@@ -694,6 +741,7 @@ def new_route_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Edit Route Logic =======
     def edit_route():
         r_id = route_id_entry.get().strip()
         s_name = start_name_entry.get().strip()
@@ -712,8 +760,7 @@ def new_route_gui():
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
-            cursor.execute("SELECT 1 FROM route WHERE r_id = ?", (r_id,))
+            cursor.execute('SELECT 1 FROM route WHERE r_id = ?', (r_id,))
             if cursor.fetchone() is None:
                 messagebox.showerror("Error", "Route ID not found!")
                 return
@@ -723,7 +770,6 @@ def new_route_gui():
                 SET s_name = ?, s_id = ?, e_name = ?, e_id = ?
                 WHERE r_id = ?
             ''', (s_name, s_id, e_name, e_id, r_id))
-
             conn.commit()
             conn.close()
 
@@ -732,6 +778,7 @@ def new_route_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Clear Entries =======
     def clear_entries():
         route_id_entry.delete(0, tk.END)
         start_name_entry.delete(0, tk.END)
@@ -739,58 +786,91 @@ def new_route_gui():
         end_name_entry.delete(0, tk.END)
         end_id_entry.delete(0, tk.END)
 
+    # ======= Show All Routes (Treeview) =======
     def show_all_routes():
+        show_window = tk.Toplevel()
+        show_window.title("All Routes")
+        show_window.geometry("700x400")
+        show_window.configure(bg="#f0f0f0")
+
+        # Table Frame
+        frame = tk.Frame(show_window, bg="#f0f0f0")
+        frame.pack(pady=10, padx=20, expand=True, fill="both")
+
+        # Treeview Table
+        columns = ("Route ID", "Start Name", "Start ID", "End Name", "End ID")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
+
+        # Column Headings
+        for col in columns:
+            tree.heading(col, text=col, anchor="center")
+            tree.column(col, width=140, anchor="center")
+
+        # Scrollbar
+        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scroll_y.set)
+        scroll_y.pack(side="right", fill="y")
+
+        tree.pack(expand=True, fill="both")
+
+        # Fetch data
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT r_id, s_name, s_id, e_name, e_id FROM route
-        ''')
+        cursor.execute("SELECT * FROM route")
         routes = cursor.fetchall()
         conn.close()
 
-        show_window = tk.Toplevel()
-        show_window.title("All Routes")
-        show_window.geometry("800x400")
-
-        columns = ("Route ID", "Start Name", "Start ID", "End Name", "End ID")
-        tree = ttk.Treeview(show_window, columns=columns, show="headings", height=20)
-        tree.pack(fill=tk.BOTH, expand=True)
-
-        for col in columns:
-            tree.heading(col, text=col)
-            tree.column(col, width=150)
-
+        # Insert data into Treeview
         for route in routes:
-            tree.insert("", tk.END, values=route)
+            tree.insert("", "end", values=route)
 
-        if not routes:
-            messagebox.showinfo("No Routes Found", "There are no routes in the database.")
+        # Close Button
+        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
 
-        tk.Button(show_window, text="Close", command=show_window.destroy).pack(pady=10)
+    # ======= Buttons (Styled) =======
+    button_frame = tk.Frame(route_window, bg="#f0f0f0")
+    button_frame.pack(pady=10)
 
-    tk.Button(route_window, text="Add Route", font=("Arial", 12), command=add_route).grid(row=5, column=0, pady=20)
-    tk.Button(route_window, text="Edit Route", font=("Arial", 12), command=edit_route).grid(row=5, column=1, pady=20)
-    tk.Button(route_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=6, column=0, pady=20)
-    tk.Button(route_window, text="Show All Routes", font=("Arial", 12), command=show_all_routes).grid(row=6, column=1, pady=20)
+    tk.Button(button_frame, text="Add Route", font=("Arial", 12), bg="#4CAF50", fg="white",
+              command=add_route, width=12, relief="raised", bd=2).grid(row=0, column=0, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Edit Route", font=("Arial", 12), bg="#2196F3", fg="white",
+              command=edit_route, width=12, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Show All", font=("Arial", 12), bg="#FF9800", fg="white",
+              command=show_all_routes, width=12, relief="raised", bd=2).grid(row=0, column=2, padx=10, pady=10)
+
+    # Close Button
+    tk.Button(button_frame, text="Close", font=("Arial", 12), bg="#FF5733", fg="white",
+              command=route_window.destroy, width=12, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
 
 def new_run_gui():
     run_window = tk.Toplevel()
     run_window.title("Manage Running Buses")
-    run_window.geometry("800x600")  
+    run_window.geometry("600x500")
+    run_window.configure(bg="#f0f0f0")
 
-    tk.Label(run_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(run_window, text="Run Date (YYYY-MM-DD):", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(run_window, text="Seats Available:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
+    # ======= Heading Label =======
+    tk.Label(run_window, text="Manage Running Buses", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
 
-    bus_id_entry = tk.Entry(run_window, font=("Arial", 12))
-    run_date_entry = tk.Entry(run_window, font=("Arial", 12))
-    seat_avail_entry = tk.Entry(run_window, font=("Arial", 12))
+    # ======= Main Form Frame =======
+    form_frame = tk.Frame(run_window, bg="#f0f0f0")
+    form_frame.pack(pady=20, padx=20)
 
-    bus_id_entry.grid(row=0, column=1, padx=10, pady=10)
-    run_date_entry.grid(row=1, column=1, padx=10, pady=10)
-    seat_avail_entry.grid(row=2, column=1, padx=10, pady=10)
+    # ======= Labels & Entries =======
+    tk.Label(form_frame, text="Bus ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    bus_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    bus_id_entry.grid(row=0, column=1, padx=10, pady=5)
 
+    tk.Label(form_frame, text="Run Date (YYYY-MM-DD):", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    run_date_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    run_date_entry.grid(row=1, column=1, padx=10, pady=5)
+
+    tk.Label(form_frame, text="Seats Available:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    seat_avail_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    seat_avail_entry.grid(row=2, column=1, padx=10, pady=5)
+
+    # ======= Add Running Bus Logic =======
     def add_running():
         b_id = bus_id_entry.get().strip()
         run_date = run_date_entry.get().strip()
@@ -801,25 +881,24 @@ def new_run_gui():
             return
 
         try:
-            seat_avail = int(seat_avail) 
+            seat_avail = int(seat_avail)
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
-            cursor.execute(''' 
+            cursor.execute('''
                 INSERT INTO running (b_id, run_date, seat_avail)
                 VALUES (?, ?, ?)
             ''', (b_id, run_date, seat_avail))
-
             conn.commit()
             conn.close()
 
             messagebox.showinfo("Success", "Running bus added successfully!")
-            clear_entries() 
+            clear_entries()
         except sqlite3.IntegrityError:
             messagebox.showerror("Error", "Bus ID or Run Date already exists, or invalid Bus ID!")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Edit Running Bus Logic =======
     def edit_running():
         b_id = bus_id_entry.get().strip()
         run_date = run_date_entry.get().strip()
@@ -830,10 +909,9 @@ def new_run_gui():
             return
 
         try:
-            seat_avail = int(seat_avail)  
+            seat_avail = int(seat_avail)
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
             cursor.execute('SELECT * FROM running WHERE b_id = ? AND run_date = ?', (b_id, run_date))
             if cursor.fetchone():
                 cursor.execute('''
@@ -847,69 +925,77 @@ def new_run_gui():
 
             conn.commit()
             conn.close()
-
             clear_entries()
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
+    # ======= Clear Entries =======
     def clear_entries():
         bus_id_entry.delete(0, tk.END)
         run_date_entry.delete(0, tk.END)
         seat_avail_entry.delete(0, tk.END)
 
+    # ======= Show All Running Buses (Treeview) =======
     def show_all_running():
-        try:
-            conn = sqlite3.connect("bus_reservation.db")
-            cursor = conn.cursor()
+        show_window = tk.Toplevel()
+        show_window.title("All Running Buses")
+        show_window.geometry("700x400")
+        show_window.configure(bg="#f0f0f0")
 
-            cursor.execute('''
-                SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
-                FROM running r
-                JOIN bus b ON r.b_id = b.bus_id
-            ''')
-            running_buses = cursor.fetchall()
-            conn.close()
+        # Table Frame
+        frame = tk.Frame(show_window, bg="#f0f0f0")
+        frame.pack(pady=10, padx=20, expand=True, fill="both")
 
-            show_window = tk.Toplevel()
-            show_window.title("All Running Buses")
-            show_window.geometry("800x500")
-            text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
-            text_area.pack(expand=True, fill=tk.BOTH)
-            if running_buses:
-                for bus in running_buses:
-                    text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
-                    text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
-            conn = sqlite3.connect("bus_reservation.db")
-            cursor = conn.cursor()
+        # Treeview Table
+        columns = ("Bus ID", "Bus Type", "Run Date", "Seats Available")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
 
-            cursor.execute('''
-                SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
-                FROM running r
-                JOIN bus b ON r.b_id = b.bus_id
-            ''')
-            running_buses = cursor.fetchall()
-            conn.close()
+        # Column Headings
+        for col in columns:
+            tree.heading(col, text=col, anchor="center")
+            tree.column(col, width=140, anchor="center")
 
-            show_window = tk.Toplevel()
-            show_window.title("All Running Buses")
-            show_window.geometry("800x500")
-            text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
-            text_area.pack(expand=True, fill=tk.BOTH)
-            if running_buses:
-                for bus in running_buses:
-                    text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
-                    text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
-                    text_area.insert(tk.END, f"Run Date: {bus[2]}\n")
-                    text_area.insert(tk.END, f"Seats Available: {bus[3]}\n")
-                    text_area.insert(tk.END, "-" * 50 + "\n")
-            else:
-                text_area.insert(tk.END, "No running buses found.")
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+        # Scrollbar
+        scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscroll=scroll_y.set)
+        scroll_y.pack(side="right", fill="y")
 
-    tk.Button(run_window, text="Add Running Bus", font=("Arial", 12), command=add_running).grid(row=3, column=0, pady=20)
-    tk.Button(run_window, text="Edit Running Bus", font=("Arial", 12), command=edit_running).grid(row=4, column=0, pady=20)
-    tk.Button(run_window, text="Show All Running Buses", font=("Arial", 12), command=show_all_running).grid(row=5, column=0, pady=20)
+        tree.pack(expand=True, fill="both")
+
+        # Fetch data
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
+            FROM running r
+            JOIN bus b ON r.b_id = b.bus_id
+        ''')
+        running_buses = cursor.fetchall()
+        conn.close()
+
+        # Insert data into Treeview
+        for bus in running_buses:
+            tree.insert("", "end", values=bus)
+
+        # Close Button
+        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
+
+    # ======= Buttons (Styled) =======
+    button_frame = tk.Frame(run_window, bg="#f0f0f0")
+    button_frame.pack(pady=10)
+
+    tk.Button(button_frame, text="Add Running Bus", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white",
+              command=add_running, width=15, relief="raised", bd=2).grid(row=0, column=0, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Edit Running Bus", font=("Arial", 12, "bold"), bg="#2196F3", fg="white",
+              command=edit_running, width=15, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
+
+    tk.Button(button_frame, text="Show All", font=("Arial", 12, "bold"), bg="#FF9800", fg="white",
+              command=show_all_running, width=15, relief="raised", bd=2).grid(row=0, column=2, padx=10, pady=10)
+
+    # Close Button
+    tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
+              command=run_window.destroy, width=15, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
 
 # Main application
 def main():

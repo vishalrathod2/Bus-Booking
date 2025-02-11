@@ -440,49 +440,32 @@ def new_operator_gui():
         address_entry.delete(0, tk.END)
         phone_entry.delete(0, tk.END)
         email_entry.delete(0, tk.END)
-
-    # ======= Show All Operators (Treeview) =======
     def show_all_operators():
         show_window = tk.Toplevel()
         show_window.title("All Operators")
         show_window.geometry("900x600")
         show_window.configure(bg="#f0f0f0")
-
-        # Table Frame
         frame = tk.Frame(show_window, bg="#f0f0f0")
         frame.pack(pady=10, padx=20, expand=True, fill="both")
-
-        # Treeview Table
         columns = ("Operator ID", "Name", "Address", "Phone", "Email")
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
-
-        # Column Headings
         for col in columns:
             tree.heading(col, text=col, anchor="center")
             tree.column(col, width=140, anchor="center")
-
-        # Scrollbar
         scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscroll=scroll_y.set)
         scroll_y.pack(side="right", fill="y")
-
         tree.pack(expand=True, fill="both")
-
-        # Fetch data
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM operator")
         operators = cursor.fetchall()
         conn.close()
-
-        # Insert data into Treeview
         for operator in operators:
             tree.insert("", "end", values=operator)
 
-        # Close Button
         tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
 
-    # ======= Buttons (Styled) =======
     button_frame = tk.Frame(operator_window, bg="#f0f0f0")
     button_frame.pack(pady=10)
 

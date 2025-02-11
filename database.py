@@ -66,29 +66,21 @@ def initialize_db():
     conn.commit()
     conn.close()
 def check_booking_gui():
-    # Main window for checking bookings
     root = tk.Tk()
     root.title("Check Booking")
     root.geometry("400x300")
-    
-
     tk.Label(root, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
-
     tk.Label(root, text="Enter Contact Number:", font=("Arial", 12)).pack(pady=5)
     contact_entry = tk.Entry(root, font=("Arial", 12), width=30)
     contact_entry.pack(pady=5)
-
     def check_booking():
         contact = contact_entry.get().strip()
         if not contact:
             messagebox.showerror("Error", "Contact number is required!")
             return
-
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
-
-            # Query to check bookings by contact
             cursor.execute("""
             SELECT 
                 b.booking_id, b.b_id, b.run_date, b.user_name, b.seat_number, bus.bus_type 
@@ -101,7 +93,6 @@ def check_booking_gui():
             """, (contact,))
             bookings = cursor.fetchall()
             conn.close()
-
             if bookings:
                 display_bookings(bookings)
             else:
@@ -113,24 +104,17 @@ def check_booking_gui():
         booking_window = tk.Toplevel(root)
         booking_window.title("Booking Details")
         booking_window.geometry("600x300")
-
         tk.Label(booking_window, text="Your Bookings", font=("Arial", 16, "bold")).pack(pady=10)
-
         columns = ("Booking ID", "Bus ID", "Run Date", "User Name", "Seat Number", "Bus Type")
         tree = ttk.Treeview(booking_window, columns=columns, show="headings", height=10)
         tree.pack(fill=tk.BOTH, expand=True)
-
         for col in columns:
             tree.heading(col, text=col)
             tree.column(col, width=100)
-
         for booking in bookings:
             tree.insert("", tk.END, values=booking)
-
         tk.Button(booking_window, text="Close", font=("Arial", 12), command=booking_window.destroy).pack(pady=10)
-
     tk.Button(root, text="Check Booking", font=("Arial", 14, "bold"), command=check_booking, bg="blue", fg="white").pack(pady=20)
-
     root.mainloop()
 def find_bus_page():
     # Main window

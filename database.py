@@ -481,31 +481,29 @@ def new_operator_gui():
 def new_bus_gui():
     bus_window = tk.Toplevel()
     bus_window.title("Manage Buses")
-    bus_window.geometry("800x600") 
-    
+    bus_window.geometry("450x500") 
+    tk.Label(bus_window, text="Add New Bus", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).grid(row=0, column=0, columnspan=2, sticky="ew")
 
-    tk.Label(bus_window, text="Bus ID:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(bus_window, text="Bus Type:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(bus_window, text="Capacity:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(bus_window, text="Operator ID:", font=("Arial", 12)).grid(row=3, column=0, padx=10, pady=10, sticky='w')
-    tk.Label(bus_window, text="Route ID:", font=("Arial", 12)).grid(row=4, column=0, padx=10, pady=10, sticky='w')
+    form_frame = tk.Frame(bus_window, bg="#f0f0f0")
+    form_frame.grid(row=1, column=0, columnspan=2, pady=20, padx=20, sticky="ew")    
 
-    bus_id_entry = tk.Entry(bus_window, font=("Arial", 12))
-    bus_type_entry = tk.Entry(bus_window, font=("Arial", 12))
-    capacity_entry = tk.Entry(bus_window, font=("Arial", 12))
-
-    operator_var = tk.StringVar(bus_window)
-    route_var = tk.StringVar(bus_window)
-
-    bus_id_entry.grid(row=0, column=1, padx=10, pady=10)
-    bus_type_entry.grid(row=1, column=1, padx=10, pady=10)
-    capacity_entry.grid(row=2, column=1, padx=10, pady=10)
-
-    operator_menu = tk.OptionMenu(bus_window, operator_var, "")
-    operator_menu.grid(row=3, column=1, padx=10, pady=10)
-
-    route_menu = tk.OptionMenu(bus_window, route_var, "")
-    route_menu.grid(row=4, column=1, padx=10, pady=10)
+    tk.Label(form_frame, text="Bus ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+    bus_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    bus_id_entry.grid(row=0, column=1, padx=10, pady=5)
+    tk.Label(form_frame, text="Bus Type:", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    bus_type_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    bus_type_entry.grid(row=1, column=1, padx=10, pady=5)    
+    tk.Label(form_frame, text="Capacity:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    capacity_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    capacity_entry.grid(row=2, column=1, padx=10, pady=5)   
+    tk.Label(form_frame, text="Operator ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=3, column=0, padx=10, pady=5, sticky="w")
+    operator_var = tk.StringVar()
+    operator_menu = ttk.Combobox(form_frame, textvariable=operator_var, font=("Arial", 12), width=23, state="readonly")
+    operator_menu.grid(row=3, column=1, padx=10, pady=5)
+    tk.Label(form_frame, text="Route ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=4, column=0, padx=10, pady=5, sticky="w")
+    route_var = tk.StringVar()
+    route_menu = ttk.Combobox(form_frame, textvariable=route_var, font=("Arial", 12), width=23, state="readonly")
+    route_menu.grid(row=4, column=1, padx=10, pady=5)
 
     def populate_dropdowns():
         conn = sqlite3.connect("bus_reservation.db")
@@ -513,23 +511,10 @@ def new_bus_gui():
 
         cursor.execute("SELECT opr_id, name FROM operator")
         operators = cursor.fetchall()
-        if operators:
-            operator_menu['menu'].delete(0, 'end')
-            for opr_id, name in operators:
-                operator_menu['menu'].add_command(label=f"{opr_id} - {name}", command=lambda value=f"{opr_id}": operator_var.set(value))
-        else:
-            operator_var.set("No Operators Available")
-            operator_menu['menu'].add_command(label="No Operators Available")
-
+        operator_menu["values"] = [f"{op[0]} - {op[1]}" for op in operators]
         cursor.execute("SELECT r_id, s_name, e_name FROM route")
         routes = cursor.fetchall()
-        if routes:
-            route_menu['menu'].delete(0, 'end')
-            for r_id, s_name, e_name in routes:
-                route_menu['menu'].add_command(label=f"{r_id} - {s_name} to {e_name}", command=lambda value=f"{r_id}": route_var.set(value))
-        else:
-            route_var.set("No Routes Available")
-            route_menu['menu'].add_command(label="No Routes Available")
+        route_menu["values"] = [f"{r[0]} - {r[1]} to {r[2]}" for r in routes]
 
         conn.close()
 
@@ -569,8 +554,6 @@ def new_bus_gui():
                 VALUES (?, ?, ?)
             ''', (bus_id, run_date, capacity))
 
-
-
             conn.commit()
             conn.close()
 
@@ -580,63 +563,61 @@ def new_bus_gui():
             messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!")
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
+
     def clear_entries():
         bus_id_entry.delete(0, tk.END)
         bus_type_entry.delete(0, tk.END)
         capacity_entry.delete(0, tk.END)
         operator_var.set("")
         route_var.set("")
-    tk.Button(bus_window, text="Add Bus", font=("Arial", 12), command=add_bus).grid(row=5, column=0, pady=20)
-    tk.Button(bus_window, text="Clear", font=("Arial", 12), command=clear_entries).grid(row=5, column=1, pady=20)
+
+    button_frame = tk.Frame(bus_window, bg="#f0f0f0")
+    button_frame.grid(row=2, column=0, columnspan=2, pady=10)
+
+    tk.Button(button_frame, text="Add Bus", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", 
+              command=add_bus, width=12, relief="raised", bd=2).grid(row=0, column=0, padx=10, pady=10)
+    tk.Button(button_frame, text="Clear", font=("Arial", 12, "bold"), bg="#FF9800", fg="white",
+              command=clear_entries, width=12, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
+    tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
+              command=bus_window.destroy, width=12, relief="raised", bd=2).grid(row=0, column=2, padx=10, pady=10)
 
     def show_all_buses():
-        # Create a new window for showing all buses
         show_window = tk.Toplevel()
         show_window.title("All Buses")
-        show_window.geometry("900x500")
-        show_window.configure(bg="#f0f0f0")  # Set background color
+        show_window.geometry("800x525")
+        show_window.configure(bg="#f0f0f0")
 
-        # Heading Label
-        tk.Label(show_window, text="Bus Details", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
+        tk.Label(show_window, text="Bus Details", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).grid(row=0, column=0, columnspan=2, sticky="ew")
 
-        # Create a frame for the treeview with padding
         frame = tk.Frame(show_window, bg="#f0f0f0")
-        frame.pack(pady=10, padx=20, expand=True, fill="both")
+        frame.grid(row=1, column=0, columnspan=2, pady=10, padx=20, sticky="ew")
 
-        # Define columns
         columns = ("Bus ID", "Bus Type", "Capacity", "Operator", "Route")
-
-        # Create Treeview widget
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
         
-        # Define column headings with width
         tree.heading("Bus ID", text="Bus ID", anchor="center")
         tree.heading("Bus Type", text="Bus Type", anchor="center")
         tree.heading("Capacity", text="Capacity", anchor="center")
         tree.heading("Operator", text="Operator", anchor="center")
         tree.heading("Route", text="Route", anchor="center")
 
-        # Set column widths and alignments
         tree.column("Bus ID", width=100, anchor="center")
         tree.column("Bus Type", width=150, anchor="center")
         tree.column("Capacity", width=80, anchor="center")
         tree.column("Operator", width=200, anchor="center")
         tree.column("Route", width=250, anchor="center")
 
-        # Add striped row styling
         style = ttk.Style()
         style.configure("Treeview", font=("Arial", 12), rowheight=25, background="#f9f9f9", foreground="black")
         style.configure("Treeview.Heading", font=("Arial", 13, "bold"), background="#555555", foreground="black")
         style.map("Treeview", background=[("selected", "#4CAF50")])
 
-        # Add scrollbar
         scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscroll=scroll_y.set)
-        scroll_y.pack(side="right", fill="y")
+        scroll_y.grid(row=0, column=1, sticky="ns")
         
-        tree.pack(expand=True, fill="both")
+        tree.grid(row=0, column=0, sticky="nsew")
 
-        # Fetch bus details from database
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
 
@@ -649,15 +630,13 @@ def new_bus_gui():
         buses = cursor.fetchall()
         conn.close()
 
-        # Insert data into Treeview
         for bus in buses:
             tree.insert("", "end", values=bus)
 
-        # Button to close the window
-        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
-     
-    tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=6, column=0, columnspan=2, pady=10)
-  
+        tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).grid(row=2, column=0, columnspan=2, pady=10)
+
+    tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=3, column=0, columnspan=2, pady=10)
+
 def new_route_gui():
     route_window = tk.Toplevel()
     route_window.title("Manage Routes")
@@ -880,6 +859,26 @@ def new_run_gui():
 
     def show_all_running():
         try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT r.b_id, b.bus_type, r.run_date, r.seat_avail
+                FROM running r
+                JOIN bus b ON r.b_id = b.bus_id
+            ''')
+            running_buses = cursor.fetchall()
+            conn.close()
+
+            show_window = tk.Toplevel()
+            show_window.title("All Running Buses")
+            show_window.geometry("800x500")
+            text_area = tk.Text(show_window, font=("Arial", 12), wrap=tk.WORD)
+            text_area.pack(expand=True, fill=tk.BOTH)
+            if running_buses:
+                for bus in running_buses:
+                    text_area.insert(tk.END, f"Bus ID: {bus[0]}\n")
+                    text_area.insert(tk.END, f"Bus Type: {bus[1]}\n")
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 

@@ -66,21 +66,29 @@ def initialize_db():
     conn.commit()
     conn.close()
 def check_booking_gui():
+    # Main window for checking bookings
     root = tk.Tk()
     root.title("Check Booking")
     root.geometry("400x300")
+    
+
     tk.Label(root, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
+
     tk.Label(root, text="Enter Contact Number:", font=("Arial", 12)).pack(pady=5)
     contact_entry = tk.Entry(root, font=("Arial", 12), width=30)
     contact_entry.pack(pady=5)
+
     def check_booking():
         contact = contact_entry.get().strip()
         if not contact:
             messagebox.showerror("Error", "Contact number is required!")
             return
+
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
+
+            # Query to check bookings by contact
             cursor.execute("""
             SELECT 
                 b.booking_id, b.b_id, b.run_date, b.user_name, b.seat_number, bus.bus_type 
@@ -93,6 +101,7 @@ def check_booking_gui():
             """, (contact,))
             bookings = cursor.fetchall()
             conn.close()
+
             if bookings:
                 display_bookings(bookings)
             else:
@@ -104,17 +113,24 @@ def check_booking_gui():
         booking_window = tk.Toplevel(root)
         booking_window.title("Booking Details")
         booking_window.geometry("600x300")
+
         tk.Label(booking_window, text="Your Bookings", font=("Arial", 16, "bold")).pack(pady=10)
+
         columns = ("Booking ID", "Bus ID", "Run Date", "User Name", "Seat Number", "Bus Type")
         tree = ttk.Treeview(booking_window, columns=columns, show="headings", height=10)
         tree.pack(fill=tk.BOTH, expand=True)
+
         for col in columns:
             tree.heading(col, text=col)
             tree.column(col, width=100)
+
         for booking in bookings:
             tree.insert("", tk.END, values=booking)
+
         tk.Button(booking_window, text="Close", font=("Arial", 12), command=booking_window.destroy).pack(pady=10)
+
     tk.Button(root, text="Check Booking", font=("Arial", 14, "bold"), command=check_booking, bg="blue", fg="white").pack(pady=20)
+
     root.mainloop()
 def find_bus_page():
     # Main window
@@ -178,7 +194,7 @@ def find_bus_page():
     def display_buses(buses, travel_date):
         bus_window = tk.Toplevel(root)
         bus_window.title("Available Buses")
-        bus_window.geometry("800x400")
+        bus_window.geometry("800x500")
 
         columns = ("Bus ID", "Bus Type", "Capacity", "Run Date", "Seats Available")
         tree = ttk.Treeview(bus_window, columns=columns, show="headings", height=20)
@@ -440,32 +456,49 @@ def new_operator_gui():
         address_entry.delete(0, tk.END)
         phone_entry.delete(0, tk.END)
         email_entry.delete(0, tk.END)
+
+    # ======= Show All Operators (Treeview) =======
     def show_all_operators():
         show_window = tk.Toplevel()
         show_window.title("All Operators")
         show_window.geometry("900x600")
         show_window.configure(bg="#f0f0f0")
+
+        # Table Frame
         frame = tk.Frame(show_window, bg="#f0f0f0")
         frame.pack(pady=10, padx=20, expand=True, fill="both")
+
+        # Treeview Table
         columns = ("Operator ID", "Name", "Address", "Phone", "Email")
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=15)
+
+        # Column Headings
         for col in columns:
             tree.heading(col, text=col, anchor="center")
             tree.column(col, width=140, anchor="center")
+
+        # Scrollbar
         scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscroll=scroll_y.set)
         scroll_y.pack(side="right", fill="y")
+
         tree.pack(expand=True, fill="both")
+
+        # Fetch data
         conn = sqlite3.connect("bus_reservation.db")
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM operator")
         operators = cursor.fetchall()
         conn.close()
+
+        # Insert data into Treeview
         for operator in operators:
             tree.insert("", "end", values=operator)
 
+        # Close Button
         tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
 
+    # ======= Buttons (Styled) =======
     button_frame = tk.Frame(operator_window, bg="#f0f0f0")
     button_frame.pack(pady=10)
 
@@ -757,7 +790,7 @@ def new_route_gui():
     def show_all_routes():
         show_window = tk.Toplevel()
         show_window.title("All Routes")
-        show_window.geometry("700x400")
+        show_window.geometry("800x500")
         show_window.configure(bg="#f0f0f0")
 
         # Table Frame
@@ -906,7 +939,7 @@ def new_run_gui():
     def show_all_running():
         show_window = tk.Toplevel()
         show_window.title("All Running Buses")
-        show_window.geometry("700x400")
+        show_window.geometry("800x500")
         show_window.configure(bg="#f0f0f0")
 
         # Table Frame
@@ -982,13 +1015,25 @@ def main():
     image_label.place(relx=0.5, rely=0.2, anchor='center')  # Image centered at the top
 
     # Customize button colors
-    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui).place(relx=0.33, rely=0.5, anchor='center')
-    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page).place(relx=0.5, rely=0.5, anchor='center')
-    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui).place(relx=0.67, rely=0.5, anchor='center')
+    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui).place(relx=0.25, rely=0.5, anchor='center')
+    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page).place(relx=0.4, rely=0.5, anchor='center')
+    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui).place(relx=0.55, rely=0.5, anchor='center')
+    tk.Button(root, text="About Us", font=("Arial", 14), bg="#FF9800", fg="white", command=about_us_gui).place(relx=0.7, rely=0.5, anchor='center')
 
     # Exit button, centered below the other buttons
     tk.Button(root, text="Exit", font=("Arial", 14), bg="#F44336", fg="white", command=root.quit).place(relx=0.5, rely=0.7, anchor='center')
 
     root.mainloop()
+
+def about_us_gui():
+    about_window = tk.Toplevel()
+    about_window.title("About Us")
+    about_window.geometry("600x400")
+    about_window.configure(bg="#f0f0f0")
+
+    tk.Label(about_window, text="About Us", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
+    tk.Label(about_window, text="This is a Bus Reservation System developed by XYZ.", font=("Arial", 14), bg="#f0f0f0", wraplength=500).pack(pady=20)
+    tk.Button(about_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=about_window.destroy).pack(pady=10)
+
 if __name__ == "__main__":
     main()

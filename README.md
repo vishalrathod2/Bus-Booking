@@ -72,6 +72,8 @@ Ensure you have Python installed.
 🔗 [Download Python](https://www.python.org/downloads/)
 <br><br>
 
+### **1️⃣ Install SQLite**
+
 🔗 [Download SQLite](https://www.sqlite.org/download.html)
 
 
@@ -79,7 +81,14 @@ Check if Python is installed:
 ```sh
 python --version
 
-pip install tkcalendar Pillow
+pip install ttk
+pip install tk
+pip install tkcalendar
+pip install sqlite3
+pip install messagebox
+pip install PhotoImage
+pip install Pillow
+
 
 sqlite3 --version
 

@@ -109,9 +109,7 @@ python main.py
 
 ---
 
-✅ **Clear project overview**  
-✅ **Proper installation guide**  
-✅ **Explains project structure**  
-✅ **Includes screenshots & contact info**  
-
-Would you like any modifications? 🚀
+✅ Clear project overview 
+✅ Proper installation guide  
+✅ Explains project structure  
+✅ Includes screenshots & contact info

@@ -11,7 +11,14 @@
 </p>
 <h3 align="center"></h3>
 
-<p align="center">
+<p>
     <strong>Bus Booking System</strong><br>
     A project using Python, Tkinter, and SQLite.
 </p>
+
+## Installation
+
+Make sure you have Python installed. Then, install the required module:
+
+```sh
+pip install tkcalendar

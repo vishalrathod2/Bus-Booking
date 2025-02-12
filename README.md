@@ -38,19 +38,13 @@ sqlite3 --version
 
 Make sure you have Python installed. Then, install the required module:
 
-```sh
+```md
 pip install tkcalendar
-```sh
 pip install sqlite3
-```sh
 pip install messagebox
-```sh
 pip install PhotoImage
-```sh
 pip install ttk
-```sh
 pip install tk
-```sh
 pip install Pillow
 
 

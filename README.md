@@ -9,10 +9,11 @@
 <p align="center">
     <img src="img/Admin.png" width="300">
 </p>
-<h3 align="center"></h3>
+<br><br>
+<h3 align="center">Bus Booking System</h3><br>
 
-<p>
-    <strong>Bus Booking System</strong><br>
+<p align="center">
+    <br>
     A project using Python, Tkinter, and SQLite.
 </p>
 

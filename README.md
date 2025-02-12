@@ -1,3 +1,3 @@
 # Bus-Booking
-![Bus Booking](assets/Admin.png)
-![Bus Booking](assets/Client.png)
+![Bus Booking](img/Admin.png)
+![Bus Booking](img/Client.png)

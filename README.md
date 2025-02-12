@@ -28,9 +28,10 @@ During installation, **check the box** that says **"Add Python to PATH"**.
 
 To verify installation, run the following command:
 
-```sh
+
 python --version
 
+### ** Install Python Library**
 
 Make sure you have Python installed. Then, install the required module:
 

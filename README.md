@@ -70,10 +70,11 @@ A Python-based **Bus Reservation System** using `Tkinter` for the GUI and `SQLit
 ### **1️⃣ Install Python**
 Ensure you have Python installed.  
 🔗 [Download Python](https://www.python.org/downloads/)
-<br>
+
+
 python --version
 
-### **1️⃣ Install SQLite**
+### 2️⃣ Install SQLite
 
 🔗 [Download SQLite](https://www.sqlite.org/download.html)
 

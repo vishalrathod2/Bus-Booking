@@ -7,7 +7,7 @@
 ![Bus Booking](img/Client.png)
 <h3 align="center"></h3> -->
 <p align="center">
-    <img src="asimgsets/Admin.png" width="300">
+    <img src="img/Admin.png" width="300">
 </p>
 
 <p align="center">

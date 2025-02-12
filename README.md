@@ -23,6 +23,8 @@
 Make sure you have Python installed. You can download it from the official website:
 
 🔗 [Download Python](https://www.python.org/downloads/)
+<br>
+
 🔗 [Download SQLite](https://www.sqlite.org/download.html)
 
 To verify installation, run the following command:

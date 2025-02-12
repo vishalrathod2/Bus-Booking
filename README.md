@@ -1,14 +1,15 @@
-<!-- <h1 align="center" >Bus-Booking</h1>
+<h1 align="center" >Bus-Booking</h1>
 <h2>Client Panel Img</h2><br><br>
 
-![Bus Booking](img/Admin.png)
+<p align="center">
+    <img src="img/Client.png" width="300">
+</p>
 <h2>Admin Panel Img</><br><br>
 
-![Bus Booking](img/Client.png)
-<h3 align="center"></h3> -->
 <p align="center">
     <img src="img/Admin.png" width="300">
 </p>
+<h3 align="center"></h3>
 
 <p align="center">
     <strong>Bus Booking System</strong><br>

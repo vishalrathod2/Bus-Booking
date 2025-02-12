@@ -19,17 +19,20 @@
 
 ## Installation Guide
 
-### ** Install Python**
+### ** Install Python & SQLite**
 Make sure you have Python installed. You can download it from the official website:
 
 🔗 [Download Python](https://www.python.org/downloads/)
-
-During installation, **check the box** that says **"Add Python to PATH"**.
+🔗 [Download SQLite](https://www.sqlite.org/download.html)
 
 To verify installation, run the following command:
 
 
 python --version
+
+for SQLite
+
+sqlite3 --version
 
 ### ** Install Python Library**
 
@@ -37,11 +40,17 @@ Make sure you have Python installed. Then, install the required module:
 
 ```sh
 pip install tkcalendar
+```sh
 pip install sqlite3
+```sh
 pip install messagebox
+```sh
 pip install PhotoImage
+```sh
 pip install ttk
+```sh
 pip install tk
+```sh
 pip install Pillow
 
 

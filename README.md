@@ -59,10 +59,8 @@ A Python-based **Bus Reservation System** using `Tkinter` for the GUI and `SQLit
 ## 🚀 Features
 
 - 🔍 **Search Routes** – Find available buses by selecting source, destination, and date.
-- 🚌 **View Bus Details** – Show bus operator, timing, and seating.
 - 🎟 **Seat Booking** – Book tickets with seat selection.
 - 🛠 **Admin Panel** – Add, edit, delete bus details and manage bookings.
-- 📅 **Date Selection** – Use `tkcalendar` for date entry.
 - 💾 **SQLite Integration** – Store data securely in a local database.
 
 ---
@@ -72,6 +70,10 @@ A Python-based **Bus Reservation System** using `Tkinter` for the GUI and `SQLit
 ### **1️⃣ Install Python**
 Ensure you have Python installed.  
 🔗 [Download Python](https://www.python.org/downloads/)
+<br><br>
+
+🔗 [Download SQLite](https://www.sqlite.org/download.html)
+
 
 Check if Python is installed:
 ```sh
@@ -83,17 +85,13 @@ sqlite3 --version
 
 
 Bus-Booking/
-│-- main.py            # Main application file
-│-- database.db        # SQLite database file
-│-- assets/            # Images and icons
-│-- modules/
-│   ├── admin.py       # Admin panel for managing buses
-│   ├── booking.py     # User seat booking module
-│   ├── routes.py      # Manage bus routes
-│-- README.md          # Project documentation
+│-- main.py            
+│-- bus_reservation.db        
+│-- Img/            
+│-- README.md          
 
 
-git clone https://github.com/yourusername/Bus-Booking.git
+git clone https://github.com/vishalrathod2/Bus-Booking.git
 cd Bus-Booking
 
 python main.py
@@ -101,7 +99,6 @@ python main.py
 
 ---
 
-### **Why This README is Useful?**
 ✅ **Clear project overview**  
 ✅ **Proper installation guide**  
 ✅ **Explains project structure**  

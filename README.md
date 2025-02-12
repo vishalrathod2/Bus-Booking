@@ -85,7 +85,8 @@ sqlite3 --version
 
 
 Bus-Booking/
-│-- main.py            
+│-- main.py 
+│-- test.py           
 │-- bus_reservation.db        
 │-- Img/            
 │-- README.md          
@@ -94,7 +95,7 @@ Bus-Booking/
 git clone https://github.com/vishalrathod2/Bus-Booking.git
 cd Bus-Booking
 
-python main.py
+python main.py 
 
 
 ---

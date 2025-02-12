@@ -64,7 +64,7 @@ def initialize_db():
     ''')
    
     conn.commit()
-    conn.close()
+    conn.close() 
 def check_booking_gui():
     # Main window for checking bookings
     root = tk.Tk()
@@ -1032,7 +1032,7 @@ def about_us_gui():
     about_window.configure(bg="#f0f0f0")
 
     tk.Label(about_window, text="About Us", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
-    tk.Label(about_window, text="This is a Bus Reservation System developed by XYZ.", font=("Arial", 14), bg="#f0f0f0", wraplength=500).pack(pady=20)
+    tk.Label(about_window, text="This is a Bus Reservation System developed by Saliya Ranjeet & Rathod Vishal.", font=("Arial", 14), bg="#f0f0f0", wraplength=500).pack(pady=20)
     tk.Button(about_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=about_window.destroy).pack(pady=10)
 
 if __name__ == "__main__":

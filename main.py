@@ -522,7 +522,7 @@ def new_bus_gui():
     bus_window = tk.Toplevel()
     bus_window.title("Manage Buses")
     bus_window.geometry("450x500") 
-    tk.Label(bus_window, text="Add New Bus", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).grid(row=0, column=0, columnspan=2, sticky="ew")
+    tk.Label(bus_window, text="Add/Edit Bus", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).grid(row=0, column=0, columnspan=2, sticky="ew")
 
     form_frame = tk.Frame(bus_window, bg="#f0f0f0")
     form_frame.grid(row=1, column=0, columnspan=2, pady=20, padx=20, sticky="ew")    
@@ -531,12 +531,14 @@ def new_bus_gui():
     bus_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
     bus_id_entry.grid(row=0, column=1, padx=10, pady=5)
     tk.Label(form_frame, text="Bus Type:", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-    bus_type_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
-    bus_type_entry.grid(row=1, column=1, padx=10, pady=5)    
+    bus_type_var = tk.StringVar()
+    bus_type_menu = ttk.Combobox(form_frame, textvariable=bus_type_var, font=("Arial", 12), width=23, state="readonly")
+    bus_type_menu['values'] = ("AC", "Non-AC", "Sleeper", "Local","Semi-Sleeper","Volvo","Express")
+    bus_type_menu.grid(row=1, column=1, padx=10, pady=5)
     tk.Label(form_frame, text="Capacity:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
     capacity_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
     capacity_entry.grid(row=2, column=1, padx=10, pady=5)   
-    tk.Label(form_frame, text="Operator ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=3, column=0, padx=10, pady=5, sticky="w")
+    tk.Label(form_frame, text="Operator ID:", font =("Arial", 12), bg="#f0f0f0").grid(row=3, column=0, padx=10, pady=5, sticky="w")
     operator_var = tk.StringVar()
     operator_menu = ttk.Combobox(form_frame, textvariable=operator_var, font=("Arial", 12), width=23, state="readonly")
     operator_menu.grid(row=3, column=1, padx=10, pady=5)
@@ -562,7 +564,7 @@ def new_bus_gui():
 
     def add_bus():
         bus_id = bus_id_entry.get().strip()
-        bus_type = bus_type_entry.get().strip()
+        bus_type = bus_type_var.get().strip()
         capacity = capacity_entry.get().strip()
         op_id = operator_var.get().strip()
         route_id = route_var.get().strip()
@@ -597,16 +599,6 @@ def new_bus_gui():
                 VALUES (?, ?, ?, ?, ?)
             ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
 
-            # Insert Running Schedule for Next 7 Days
-            from datetime import datetime, timedelta
-            today = datetime.today()
-            for i in range(7):  # Next 7 days
-                run_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
-                cursor.execute('''
-                    INSERT INTO running (b_id, run_date, seat_avail)
-                    VALUES (?, ?, ?)
-                ''', (bus_id, run_date, capacity))
-
             conn.commit()
             conn.close()
 
@@ -619,9 +611,57 @@ def new_bus_gui():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}", parent=bus_window)
 
+    def edit_bus():
+        bus_id = bus_id_entry.get().strip()
+        bus_type = bus_type_var.get().strip()
+        capacity = capacity_entry.get().strip()
+        op_id = operator_var.get().strip()
+        route_id = route_var.get().strip()
+
+        if not (bus_id and bus_type and capacity and op_id and route_id):
+            messagebox.showerror("Error", "All fields are required!", parent=bus_window)
+            return
+
+        try:
+            capacity = int(capacity)
+            if capacity <= 0:
+                messagebox.showerror("Error", "Capacity must be a positive number!", parent=bus_window)
+                return
+        except ValueError:
+            messagebox.showerror("Error", "Capacity must be a numeric value!", parent=bus_window)
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+
+            # Check if Bus ID exists
+            cursor.execute("SELECT bus_id FROM bus WHERE bus_id = ?", (bus_id,))
+            if not cursor.fetchone():
+                messagebox.showerror("Error", "Bus ID does not exist!", parent=bus_window)
+                conn.close()
+                return
+
+            # Update Bus details
+            cursor.execute('''
+                UPDATE bus
+                SET bus_type = ?, capacity = ?, op_id = ?, route_id = ?
+                WHERE bus_id = ?
+            ''', (bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0], bus_id))
+
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Bus updated successfully!", parent=bus_window)
+            bus_window.lift()
+            bus_window.focus_force()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=bus_window)
+
     def clear_entries():
         bus_id_entry.delete(0, tk.END)
-        bus_type_entry.delete(0, tk.END)
+        bus_type_var.set("")
         capacity_entry.delete(0, tk.END)
         operator_var.set("")
         route_var.set("")
@@ -631,8 +671,8 @@ def new_bus_gui():
 
     tk.Button(button_frame, text="Add Bus", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", 
               command=add_bus, width=12, relief="raised", bd=2).grid(row=0, column=0, padx=10, pady=10)
-    tk.Button(button_frame, text="Clear", font=("Arial", 12, "bold"), bg="#FF9800", fg="white",
-              command=clear_entries, width=12, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
+    tk.Button(button_frame, text="Edit Bus", font=("Arial", 12, "bold"), bg="#2196F3", fg="white",
+              command=edit_bus, width=12, relief="raised", bd=2).grid(row=0, column=1, padx=10, pady=10)
     tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
               command=bus_window.destroy, width=12, relief="raised", bd=2).grid(row=0, column=2, padx=10, pady=10)
 
@@ -887,29 +927,57 @@ def new_run_gui():
 
     # ======= Labels & Entries =======
     tk.Label(form_frame, text="Bus ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-    bus_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
-    bus_id_entry.grid(row=0, column=1, padx=10, pady=5)
+    bus_id_var = tk.StringVar()
+    bus_id_menu = ttk.Combobox(form_frame, textvariable=bus_id_var, font=("Arial", 12), width=23, state="readonly")
+    bus_id_menu.grid(row=0, column=1, padx=10, pady=5)
 
-    tk.Label(form_frame, text="Run Date (YYYY-MM-DD):", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-    run_date_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
+    tk.Label(form_frame, text="Run Date:", font=("Arial", 12), bg="#f0f0f0").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    run_date_entry = DateEntry(form_frame, font=("Arial", 12), width=25, date_pattern='yyyy-mm-dd')
     run_date_entry.grid(row=1, column=1, padx=10, pady=5)
 
     tk.Label(form_frame, text="Seats Available:", font=("Arial", 12), bg="#f0f0f0").grid(row=2, column=0, padx=10, pady=5, sticky="w")
     seat_avail_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
     seat_avail_entry.grid(row=2, column=1, padx=10, pady=5)
 
+    def populate_bus_ids():
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT bus_id FROM bus")
+        buses = cursor.fetchall()
+        bus_id_menu["values"] = [bus[0] for bus in buses]
+        conn.close()
+
+    def set_seat_availability(event):
+        bus_id = bus_id_var.get().strip()
+        if bus_id:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT capacity FROM bus WHERE bus_id = ?", (bus_id,))
+            bus = cursor.fetchone()
+            if bus:
+                seat_avail_entry.delete(0, tk.END)
+                seat_avail_entry.insert(0, bus[0])
+            conn.close()
+
+    bus_id_menu.bind("<<ComboboxSelected>>", set_seat_availability)
+    populate_bus_ids()
+
     # ======= Add Running Bus Logic =======
     def add_running():
-        b_id = bus_id_entry.get().strip()
+        b_id = bus_id_var.get().strip()
         run_date = run_date_entry.get().strip()
         seat_avail = seat_avail_entry.get().strip()
 
         if not (b_id and run_date and seat_avail):
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "All fields are required!", parent=run_window)
             return
 
         try:
             seat_avail = int(seat_avail)
+            if seat_avail <= 0:
+                messagebox.showerror("Error", "Seats available must be a positive number!", parent=run_window)
+                return
+
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
             cursor.execute('''
@@ -919,25 +987,31 @@ def new_run_gui():
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Success", "Running bus added successfully!")
+            messagebox.showinfo("Success", "Running bus added successfully!", parent=run_window)
+            run_window.lift()
+            run_window.focus_force()
             clear_entries()
         except sqlite3.IntegrityError:
-            messagebox.showerror("Error", "Bus ID or Run Date already exists, or invalid Bus ID!")
+            messagebox.showerror("Error", "Bus ID or Run Date already exists, or invalid Bus ID!", parent=run_window)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=run_window)
 
     # ======= Edit Running Bus Logic =======
     def edit_running():
-        b_id = bus_id_entry.get().strip()
+        b_id = bus_id_var.get().strip()
         run_date = run_date_entry.get().strip()
         seat_avail = seat_avail_entry.get().strip()
 
         if not (b_id and run_date and seat_avail):
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "All fields are required!", parent=run_window)
             return
 
         try:
             seat_avail = int(seat_avail)
+            if seat_avail <= 0:
+                messagebox.showerror("Error", "Seats available must be a positive number!", parent=run_window)
+                return
+
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM running WHERE b_id = ? AND run_date = ?', (b_id, run_date))
@@ -947,20 +1021,20 @@ def new_run_gui():
                     SET seat_avail = ?
                     WHERE b_id = ? AND run_date = ?
                 ''', (seat_avail, b_id, run_date))
-                messagebox.showinfo("Success", "Running bus updated successfully!")
+                messagebox.showinfo("Success", "Running bus updated successfully!", parent=run_window)
             else:
-                messagebox.showerror("Error", "Bus ID or Run Date not found!")
+                messagebox.showerror("Error", "Bus ID or Run Date not found!", parent=run_window)
 
             conn.commit()
             conn.close()
             clear_entries()
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=run_window)
 
     # ======= Clear Entries =======
     def clear_entries():
-        bus_id_entry.delete(0, tk.END)
-        run_date_entry.delete(0, tk.END)
+        bus_id_var.set("")
+        run_date_entry.set_date("")
         seat_avail_entry.delete(0, tk.END)
 
     # ======= Show All Running Buses (Treeview) =======
@@ -1024,7 +1098,7 @@ def new_run_gui():
     # Close Button
     tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
               command=run_window.destroy, width=15, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
-
+ 
 
 def main():
     root = tk.Tk()

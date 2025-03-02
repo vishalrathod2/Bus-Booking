@@ -355,13 +355,16 @@ def new_operator_gui():
     operator_window.configure(bg="#f0f0f0")  # Light background
 
     # ======= Heading Label =======
+
     tk.Label(operator_window, text="Manage Operators", font=("Arial", 16, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
 
     # ======= Main Form Frame =======
+
     form_frame = tk.Frame(operator_window, bg="#f0f0f0")
     form_frame.pack(pady=20, padx=20)
 
     # ======= Labels & Entries =======
+
     tk.Label(form_frame, text="Operator ID:", font=("Arial", 12), bg="#f0f0f0").grid(row=0, column=0, padx=10, pady=5, sticky="w")
     opr_id_entry = tk.Entry(form_frame, font=("Arial", 12), width=25)
     opr_id_entry.grid(row=0, column=1, padx=10, pady=5)
@@ -383,6 +386,7 @@ def new_operator_gui():
     email_entry.grid(row=4, column=1, padx=10, pady=5)
 
     # ======= Add Operator Logic =======
+
     def add_operator():
         opr_id = opr_id_entry.get().strip()
         name = name_entry.get().strip()
@@ -392,10 +396,6 @@ def new_operator_gui():
 
         if not (opr_id and name and address and phone and email):
             messagebox.showerror("Error", "All fields are required!", parent=operator_window)
-            return
-
-        if len(phone) != 10 or not phone.isdigit():
-            messagebox.showerror("Error", "Phone number must be 10 digits!", parent=operator_window)
             return
 
         try:
@@ -417,7 +417,7 @@ def new_operator_gui():
             messagebox.showerror("Error", "Operator ID already exists!", parent=operator_window)
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}", parent=operator_window)
-
+ 
     # ======= Edit Operator Logic =======
     def edit_operator():
         opr_id = opr_id_entry.get().strip()
@@ -568,41 +568,56 @@ def new_bus_gui():
         route_id = route_var.get().strip()
 
         if not (bus_id and bus_type and capacity and op_id and route_id):
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "All fields are required!", parent=bus_window)
             return
 
         try:
             capacity = int(capacity)
+            if capacity <= 0:
+                messagebox.showerror("Error", "Capacity must be a positive number!", parent=bus_window)
+                return
         except ValueError:
-            messagebox.showerror("Error", "Capacity must be a numeric value!")
+            messagebox.showerror("Error", "Capacity must be a numeric value!", parent=bus_window)
             return
 
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
 
+            # Check if Bus ID already exists
+            cursor.execute("SELECT bus_id FROM bus WHERE bus_id = ?", (bus_id,))
+            if cursor.fetchone():
+                messagebox.showerror("Error", "Bus ID already exists!", parent=bus_window)
+                conn.close()
+                return
+
+            # Insert Bus details
             cursor.execute('''
-            INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
+                INSERT INTO bus (bus_id, bus_type, capacity, op_id, route_id)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (bus_id, bus_type, capacity, op_id.split(" ")[0], route_id.split(" ")[0]))
+
+            # Insert Running Schedule for Next 7 Days
             from datetime import datetime, timedelta
             today = datetime.today()
             for i in range(7):  # Next 7 days
-              run_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
-              cursor.execute('''
-                INSERT INTO running (b_id, run_date, seat_avail)
-                VALUES (?, ?, ?)
-            ''', (bus_id, run_date, capacity))
+                run_date = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+                cursor.execute('''
+                    INSERT INTO running (b_id, run_date, seat_avail)
+                    VALUES (?, ?, ?)
+                ''', (bus_id, run_date, capacity))
 
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Success", "Bus added successfully!")
-            bus_window.destroy()
+            messagebox.showinfo("Success", "Bus added successfully!", parent=bus_window)
+            bus_window.lift()
+            bus_window.focus_force()
+
         except sqlite3.IntegrityError:
-            messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!")
+            messagebox.showerror("Error", "Bus ID already exists or invalid Operator/Route ID!", parent=bus_window)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=bus_window)
 
     def clear_entries():
         bus_id_entry.delete(0, tk.END)
@@ -720,16 +735,23 @@ def new_route_gui():
         e_id = end_id_entry.get().strip()
 
         if not (r_id and s_name and s_id and e_name and e_id):
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "All fields are required!", parent=route_window)
             return
 
         if s_id == e_id:
-            messagebox.showerror("Error", "Start Location ID and End Location ID cannot be the same!")
+            messagebox.showerror("Error", "Start Location ID and End Location ID cannot be the same!", parent=route_window)
             return
 
         try:
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
+
+            cursor.execute("SELECT r_id FROM route WHERE r_id = ?", (r_id,))
+            if cursor.fetchone():
+                messagebox.showerror("Error", "Route ID already exists!", parent=route_window)
+                conn.close()
+                return
+
             cursor.execute('''
                 INSERT INTO route (r_id, s_name, s_id, e_name, e_id)
                 VALUES (?, ?, ?, ?, ?)
@@ -737,12 +759,15 @@ def new_route_gui():
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Success", "Route added successfully!")
-            clear_entries()
+            messagebox.showinfo("Success", "Route added successfully!", parent=route_window)
+
+            route_window.lift()
+            route_window.focus_force()
+
         except sqlite3.IntegrityError:
-            messagebox.showerror("Error", "Route ID already exists!")
+            messagebox.showerror("Error", "Route ID already exists!", parent=route_window)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=route_window)
 
     # ======= Edit Route Logic =======
     def edit_route():

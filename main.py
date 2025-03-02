@@ -131,7 +131,7 @@ def check_booking_gui():
 
     tk.Button(root, text="Check Booking", font=("Arial", 14, "bold"), command=check_booking, bg="blue", fg="white").pack(pady=20)
 
-    root.mainloop()
+    
 def find_bus_page():
     # Main window
     root = tk.Tk()
@@ -329,7 +329,7 @@ def find_bus_page():
                 messagebox.showerror            
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
-    root.mainloop()
+  
          
 def admin_gui():
     admin_window = tk.Toplevel()
@@ -342,11 +342,11 @@ def admin_gui():
     tk.Label(admin_window, image=image).place(relx=0.5, rely=0.2, anchor='center')
 
     tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.2, rely=0.5, anchor='center')
-    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.4, rely=0.5, anchor='center')
-    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.6, rely=0.5, anchor='center')
+    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.6, rely=0.5, anchor='center')
+    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.4, rely=0.5, anchor='center')
     tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.8, rely=0.5, anchor='center')
 
-    admin_window.mainloop()
+    
 
 def new_operator_gui():
     operator_window = tk.Toplevel()
@@ -391,11 +391,11 @@ def new_operator_gui():
         email = email_entry.get().strip()
 
         if not (opr_id and name and address and phone and email):
-            messagebox.showerror("Error", "All fields are required!")
+            messagebox.showerror("Error", "All fields are required!", parent=operator_window)
             return
 
         if len(phone) != 10 or not phone.isdigit():
-            messagebox.showerror("Error", "Phone number must be 10 digits!")
+            messagebox.showerror("Error", "Phone number must be 10 digits!", parent=operator_window)
             return
 
         try:
@@ -408,12 +408,15 @@ def new_operator_gui():
             conn.commit()
             conn.close()
 
-            messagebox.showinfo("Success", "Operator added successfully!")
-            clear_entries()
+            messagebox.showinfo("Success", "Operator added successfully!", parent=operator_window)
+
+            operator_window.lift()
+            operator_window.focus_force()  # Close Add Operator window
+            
         except sqlite3.IntegrityError:
-            messagebox.showerror("Error", "Operator ID already exists!")
+            messagebox.showerror("Error", "Operator ID already exists!", parent=operator_window)
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {e}")
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=operator_window)
 
     # ======= Edit Operator Logic =======
     def edit_operator():
@@ -514,7 +517,7 @@ def new_operator_gui():
     # Close Button
     tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
               command=operator_window.destroy, width=12, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
-
+  
 def new_bus_gui():
     bus_window = tk.Toplevel()
     bus_window.title("Manage Buses")
@@ -843,7 +846,7 @@ def new_route_gui():
     # Close Button
     tk.Button(button_frame, text="Close", font=("Arial", 12), bg="#FF5733", fg="white",
               command=route_window.destroy, width=12, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
-
+  
 def new_run_gui():
     run_window = tk.Toplevel()
     run_window.title("Manage Running Buses")
@@ -997,43 +1000,35 @@ def new_run_gui():
     tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
               command=run_window.destroy, width=15, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
 
-# Main application
-def main():
-    initialize_db()
 
+def main():
     root = tk.Tk()
     root.title("Bus Reservation System")
-    root.attributes("-fullscreen", True)
-    root.bind("<Escape>", lambda event: root.attributes("-fullscreen", False))        
-    tk.Label(text="Bus Booking", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
 
+    # Get screen width and height, and set window size accordingly
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    root.geometry(f"{screen_width}x{screen_height}")  # Full screen based on resolution
+
+    tk.Label(text="Bus Booking", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
 
     root.configure(bg="#F0F0F0")
 
-    image = PhotoImage(file="Bus_for_project.png")
-    image_label = tk.Label(root, image=image, bg="#F0F0F0")  # Background color for label
-    image_label.place(relx=0.5, rely=0.2, anchor='center')  # Image centered at the top
+    try:
+        image = PhotoImage(file="Bus_for_project.png")
+        image_label = tk.Label(root, image=image, bg="#F0F0F0")
+        image_label.image = image  # Keep reference
+        image_label.place(relx=0.5, rely=0.2, anchor='center')
+    except Exception as e:
+        print(f"Error loading image: {e}")
 
-    # Customize button colors
-    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui).place(relx=0.25, rely=0.5, anchor='center')
-    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page).place(relx=0.4, rely=0.5, anchor='center')
-    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui).place(relx=0.55, rely=0.5, anchor='center')
-    tk.Button(root, text="About Us", font=("Arial", 14), bg="#FF9800", fg="white", command=about_us_gui).place(relx=0.7, rely=0.5, anchor='center')
+    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui ).place(relx=0.35, rely=0.5, anchor='center')
+    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page ).place(relx=0.5, rely=0.5, anchor='center')
+    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui ).place(relx=0.65, rely=0.5, anchor='center')
 
-    # Exit button, centered below the other buttons
     tk.Button(root, text="Exit", font=("Arial", 14), bg="#F44336", fg="white", command=root.quit).place(relx=0.5, rely=0.7, anchor='center')
 
     root.mainloop()
-
-def about_us_gui():
-    about_window = tk.Toplevel()
-    about_window.title("About Us")
-    about_window.geometry("600x400")
-    about_window.configure(bg="#f0f0f0")
-
-    tk.Label(about_window, text="About Us", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(fill="x")
-    tk.Label(about_window, text="This is a Bus Reservation System developed by Saliya Ranjeet & Rathod Vishal.", font=("Arial", 14), bg="#f0f0f0", wraplength=500).pack(pady=20)
-    tk.Button(about_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=about_window.destroy).pack(pady=10)
 
 if __name__ == "__main__":
     main()

@@ -145,20 +145,38 @@ def find_bus_page():
 
     tk.Label(input_frame, text="Source Name:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
     tk.Label(input_frame, text="Destination Name:", font=("Arial", 12)).grid(row=1, column=0, padx=10, pady=5, sticky="w")
-    tk.Label(input_frame, text="Travel Date (YYYY-MM-DD):", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=5, sticky="w")
+    tk.Label(input_frame, text="Travel Date:", font=("Arial", 12)).grid(row=2, column=0, padx=10, pady=5, sticky="w")
 
-    source_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
-    destination_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
-    travel_date_entry = tk.Entry(input_frame, font=("Arial", 12), width=30)
+    source_var = tk.StringVar()
+    destination_var = tk.StringVar()
+    source_menu = ttk.Combobox(input_frame, textvariable=source_var, font=("Arial", 12), width=28, state="readonly")
+    destination_menu = ttk.Combobox(input_frame, textvariable=destination_var, font=("Arial", 12), width=28, state="readonly")
+    travel_date_entry = DateEntry(input_frame, font=("Arial", 12), width=26, date_pattern='yyyy-mm-dd')
 
-    source_entry.grid(row=0, column=1, padx=10, pady=5)
-    destination_entry.grid(row=1, column=1, padx=10, pady=5)
+    source_menu.grid(row=0, column=1, padx=10, pady=5)
+    destination_menu.grid(row=1, column=1, padx=10, pady=5)
     travel_date_entry.grid(row=2, column=1, padx=10, pady=5)
 
+    def populate_dropdowns():
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT DISTINCT s_name FROM route")
+        sources = cursor.fetchall()
+        source_menu["values"] = [source[0] for source in sources]
+
+        cursor.execute("SELECT DISTINCT e_name FROM route")
+        destinations = cursor.fetchall()
+        destination_menu["values"] = [destination[0] for destination in destinations]
+
+        conn.close()
+
+    populate_dropdowns()
+
     def search_buses():
-        source = source_entry.get().strip()
-        destination = destination_entry.get().strip()
-        travel_date = travel_date_entry.get().strip()
+        source = source_var.get().strip()
+        destination = destination_var.get().strip()
+        travel_date = travel_date_entry.get_date().strftime('%Y-%m-%d')
 
         if not source or not destination or not travel_date:
             messagebox.showerror("Error", "All fields are required!")
@@ -224,7 +242,7 @@ def find_bus_page():
 
     def open_booking_form(bus_details, travel_date):
         bus_id, bus_type, capacity, run_date, seats_available = bus_details
-        capacity = int (capacity)
+        capacity = int(capacity)
 
         booking_window = tk.Toplevel()
         booking_window.title("Book Ticket")
@@ -242,7 +260,7 @@ def find_bus_page():
             conn = sqlite3.connect("bus_reservation.db")
             cursor = conn.cursor()
             cursor.execute('''SELECT seat_number FROM booking WHERE b_id = ? AND run_date = ?''', (bus_id, travel_date))
-            booked_seats ={seat[0] for seat in cursor.fetchall()}
+            booked_seats = {seat[0] for seat in cursor.fetchall()}
             conn.close()
             return booked_seats
 
@@ -257,21 +275,21 @@ def find_bus_page():
             for c in range(cols):
                 seat_num = (r * cols) + (c + 1)
                 if seat_num > capacity:  # Stop if we exceed the available seats
-                  break
+                    break
                 is_booked = seat_num in booked_seats
                 seat_button = tk.Button(
-                  seat_frame,
-                  text=f"{seat_num}",
-                  font=("Arial", 10),
-                  width=5,
-                  bg="red" if is_booked else "green",
-                  fg="white",
-                  state="disabled" if is_booked else "normal",
-                  command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num)
-                 )
+                    seat_frame,
+                    text=f"{seat_num}",
+                    font=("Arial", 10),
+                    width=5,
+                    bg="red" if is_booked else "green",
+                    fg="white",
+                    state="disabled" if is_booked else "normal",
+                    command=lambda num=seat_num: confirm_booking(bus_id, travel_date, num)
+                )
                 seat_button.grid(row=r, column=c, padx=5, pady=5)  # Arrange in grid layout
-                seat_buttons[seat_num ] = seat_button  # Store the button in the list
-                seat_num += 1
+                seat_buttons[seat_num] = seat_button  # Store the button in the list
+
         tk.Label(booking_window, text="User Name:", font=("Arial", 12)).pack(pady=5)
         user_name_entry = tk.Entry(booking_window, font=("Arial", 12))
         user_name_entry.pack(pady=5)
@@ -293,12 +311,7 @@ def find_bus_page():
                 conn = sqlite3.connect("bus_reservation.db")
                 cursor = conn.cursor()
 
-                # Check if the user has already booked a seat
-                # cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?''',
-                #                (bus_id, travel_date, seat_number))
-                # existing_booking = cursor.fetchone()
-
-                cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?''', 
+                cursor.execute('''SELECT * FROM booking WHERE b_id = ? AND run_date = ? AND seat_number = ?''',
                                (bus_id, travel_date, seat_number))
                 existing_booking = cursor.fetchone()
 
@@ -307,12 +320,10 @@ def find_bus_page():
                     conn.close()
                     return
 
-                # Insert the booking
                 cursor.execute('''INSERT INTO booking (b_id, run_date, user_name, contact, seat_number)
                             VALUES (?, ?, ?, ?, ?)''', (bus_id, travel_date, user_name, contact, seat_number))
-                # Update the seat availability
                 cursor.execute('''UPDATE running SET seat_avail = seat_avail - 1 WHERE b_id = ? AND run_date = ?''',
-                           (bus_id, travel_date))
+                               (bus_id, travel_date))
 
                 conn.commit()
                 conn.close()
@@ -320,13 +331,12 @@ def find_bus_page():
                 messagebox.showinfo("Success", f"Booking confirmed for Seat {seat_number}.")
                 booking_window.destroy()
 
-                # Disable the booked seat button
-                seat_buttons[seat_number - 1].config(state="disabled",bg="red")
+                seat_buttons[seat_number].config(state="disabled", bg="red")
                 booking_window.destroy()
 
-  
             except Exception as e:
-                messagebox.showerror            
+                messagebox.showerror("Error", f"An error occurred: {e}")
+
     tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
   
@@ -345,6 +355,8 @@ def admin_gui():
     tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.6, rely=0.5, anchor='center')
     tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.4, rely=0.5, anchor='center')
     tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.8, rely=0.5, anchor='center')
+
+    tk.Button(admin_window, text="Close", font=("Arial", 14), bg="#FF5733", fg="white", command=admin_window.destroy).place(relx=0.5, rely=0.7, anchor='center')
 
     
 
@@ -453,6 +465,7 @@ def new_operator_gui():
             messagebox.showerror("Error", f"An error occurred: {e}")
 
     # ======= Clear Entries =======
+
     def clear_entries():
         opr_id_entry.delete(0, tk.END)
         name_entry.delete(0, tk.END)
@@ -461,6 +474,7 @@ def new_operator_gui():
         email_entry.delete(0, tk.END)
 
     # ======= Show All Operators (Treeview) =======
+
     def show_all_operators():
         show_window = tk.Toplevel()
         show_window.title("All Operators")
@@ -502,6 +516,7 @@ def new_operator_gui():
         tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).pack(pady=10)
 
     # ======= Buttons (Styled) =======
+
     button_frame = tk.Frame(operator_window, bg="#f0f0f0")
     button_frame.pack(pady=10)
 
@@ -965,7 +980,7 @@ def new_run_gui():
     # ======= Add Running Bus Logic =======
     def add_running():
         b_id = bus_id_var.get().strip()
-        run_date = run_date_entry.get().strip()
+        run_date = run_date_entry.get_date().strftime('%Y-%m-%d')
         seat_avail = seat_avail_entry.get().strip()
 
         if not (b_id and run_date and seat_avail):
@@ -999,7 +1014,7 @@ def new_run_gui():
     # ======= Edit Running Bus Logic =======
     def edit_running():
         b_id = bus_id_var.get().strip()
-        run_date = run_date_entry.get().strip()
+        run_date = run_date_entry.get_date().strftime('%Y-%m-%d')
         seat_avail = seat_avail_entry.get().strip()
 
         if not (b_id and run_date and seat_avail):

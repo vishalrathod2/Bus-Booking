@@ -395,7 +395,7 @@ def find_bus_page():
   
             except Exception as e:
                 messagebox.showerror            
-    tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
+    # tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
     root.mainloop()
          

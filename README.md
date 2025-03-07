@@ -201,7 +201,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## 📞 Contact
 For any queries, reach out at:  
-📧 **Email:** your.email@example.com  
+📧 **Email:** rathodvishal98131@gmail.com  
 👤 **GitHub:** [vishalrathod2](https://github.com/vishalrathod2)
 
 ---

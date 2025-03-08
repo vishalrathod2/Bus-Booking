@@ -10,6 +10,15 @@ import os
 import subprocess
 import sys
 from reportlab.pdfgen import canvas
+import hashlib
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import jwt
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 
 def initialize_db():
     conn = sqlite3.connect("bus_reservation.db")
@@ -69,21 +78,180 @@ def initialize_db():
             FOREIGN KEY (b_id) REFERENCES bus (bus_id) ON DELETE CASCADE ON UPDATE CASCADE
         )
     ''')
+
+    # Add users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            phone TEXT NOT NULL CHECK(length(phone) = 10),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
    
     conn.commit()
     conn.close() 
 
+def hash_password(password):
+    """Hash a password for storing."""
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def user_login_register():
+    login_window = tk.Toplevel()
+    login_window.title("User Login/Register")
+    login_window.geometry("400x500")
+    login_window.configure(bg="#f0f0f0")
+    login_window.protocol("WM_DELETE_WINDOW", root.quit)  # Handle window close button
+
+    # Center the window
+    login_window.update_idletasks()
+    width = login_window.winfo_width()
+    height = login_window.winfo_height()
+    x = (login_window.winfo_screenwidth() // 2) - (width // 2)
+    y = (login_window.winfo_screenheight() // 2) - (height // 2)
+    login_window.geometry(f'{width}x{height}+{x}+{y}')
+
+    # Create notebook for tabs
+    notebook = ttk.Notebook(login_window)
+    notebook.pack(pady=10, expand=True)
+
+    # Login tab
+    login_frame = tk.Frame(notebook, bg="#f0f0f0")
+    login_frame.pack(fill="both", expand=True)
+
+    # Register tab
+    register_frame = tk.Frame(notebook, bg="#f0f0f0")
+    register_frame.pack(fill="both", expand=True)
+
+    notebook.add(login_frame, text="Login")
+    notebook.add(register_frame, text="Register")
+
+    # Login Form
+    tk.Label(login_frame, text="User Login", font=("Arial", 16, "bold"), 
+            bg="#f0f0f0").pack(pady=20)
+
+    tk.Label(login_frame, text="Username:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    login_username = tk.Entry(login_frame, font=("Arial", 12), width=30)
+    login_username.pack(pady=(0, 15), padx=50)
+
+    tk.Label(login_frame, text="Password:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    login_password = tk.Entry(login_frame, font=("Arial", 12), width=30, show="*")
+    login_password.pack(pady=(0, 20), padx=50)
+
+    # Register Form
+    tk.Label(register_frame, text="User Registration", font=("Arial", 16, "bold"), 
+            bg="#f0f0f0").pack(pady=20)
+
+    tk.Label(register_frame, text="Username:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_username = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_username.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Password:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_password = tk.Entry(register_frame, font=("Arial", 12), width=30, show="*")
+    reg_password.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Email:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_email = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_email.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Phone:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_phone = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_phone.pack(pady=(0, 20), padx=50)
+
+    def login():
+        username = login_username.get().strip()
+        password = login_password.get().strip()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Please fill all fields!", parent=login_window)
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", 
+                         (username, hash_password(password)))
+            user = cursor.fetchone()
+            conn.close()
+
+            if user:
+                messagebox.showinfo("Success", "Login successful!", parent=login_window)
+                login_window.destroy()
+                on_login_success()
+            else:
+                messagebox.showerror("Error", "Invalid username or password!", parent=login_window)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=login_window)
+
+    def register():
+        username = reg_username.get().strip()
+        password = reg_password.get().strip()
+        email = reg_email.get().strip()
+        phone = reg_phone.get().strip()
+
+        if not all([username, password, email, phone]):
+            messagebox.showerror("Error", "Please fill all fields!", parent=login_window)
+            return
+
+        if len(phone) != 10 or not phone.isdigit():
+            messagebox.showerror("Error", "Phone number must be 10 digits!", parent=login_window)
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO users (username, password, email, phone)
+                VALUES (?, ?, ?, ?)
+            ''', (username, hash_password(password), email, phone))
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Registration successful! Please login.", parent=login_window)
+            notebook.select(0)  # Switch to login tab
+            reg_username.delete(0, tk.END)
+            reg_password.delete(0, tk.END)
+            reg_email.delete(0, tk.END)
+            reg_phone.delete(0, tk.END)
+
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Username or email already exists!", parent=login_window)
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=login_window)
+
+    # Login button
+    tk.Button(login_frame, text="Login", font=("Arial", 12, "bold"), 
+              bg="#4CAF50", fg="white", width=20,
+              command=login).pack(pady=10)
+
+    # Register button
+    tk.Button(register_frame, text="Register", font=("Arial", 12, "bold"), 
+              bg="#4CAF50", fg="white", width=20,
+              command=register).pack(pady=10)
+
+    # Admin Login button at the bottom of login window
+    tk.Button(login_window, text="Admin Login", font=("Arial", 12), 
+              bg="#FF5722", fg="white", command=lambda: [login_window.destroy(), admin_login()]).pack(pady=10)
 
 def check_booking_gui():
     # Main window for checking bookings
-    root = tk.Tk()
-    root.title("Check Booking")
-    root.geometry("400x300")
+    check_window = tk.Toplevel()  # Changed from root = tk.Tk()
+    check_window.title("Check Booking")
+    check_window.geometry("400x300")
+    
+    tk.Label(check_window, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
 
-    tk.Label(root, text="Check Booking", font=("Arial", 20, "bold")).pack(pady=10)
-
-    tk.Label(root, text="Enter Contact Number:", font=("Arial", 12)).pack(pady=5)
-    contact_entry = tk.Entry(root, font=("Arial", 12), width=30)
+    tk.Label(check_window, text="Enter Contact Number:", font=("Arial", 12)).pack(pady=5)
+    contact_entry = tk.Entry(check_window, font=("Arial", 12), width=30)
     contact_entry.pack(pady=5)
 
     def check_booking():
@@ -118,7 +286,7 @@ def check_booking_gui():
             messagebox.showerror("Error", f"An error occurred: {e}")
 
     def display_bookings(bookings):
-        booking_window = tk.Toplevel(root)
+        booking_window = tk.Toplevel(check_window)
         booking_window.title("Booking Details")
         booking_window.geometry("700x400")
 
@@ -183,18 +351,20 @@ def check_booking_gui():
         except Exception as e:
             messagebox.showerror("Error", f"Could not open or print PDF: {e}")
 
-    tk.Button(root, text="Check Booking", font=("Arial", 14, "bold"), command=check_booking, bg="blue", fg="white").pack(pady=20)
+    tk.Button(check_window, text="Check Booking", font=("Arial", 14, "bold"), 
+              command=check_booking, bg="blue", fg="white").pack(pady=20)
 
-    root.mainloop()
+    return check_window  # Return the window object
+
 def find_bus_page():
     # Main window
-    root = tk.Tk()
-    root.title("Find Bus")
-    root.geometry("800x500")
+    find_window = tk.Toplevel()  # Changed from root = tk.Tk()
+    find_window.title("Find Bus")
+    find_window.geometry("800x500")
 
-    tk.Label(root, text="Find Bus", font=("Arial", 20, "bold")).pack(pady=10)
+    tk.Label(find_window, text="Find Bus", font=("Arial", 20, "bold")).pack(pady=10)
 
-    input_frame = tk.Frame(root)
+    input_frame = tk.Frame(find_window)
     input_frame.pack(pady=20)
 
     tk.Label(input_frame, text="Source Name:", font=("Arial", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
@@ -257,10 +427,11 @@ def find_bus_page():
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {e}")
 
-    tk.Button(root, text="Search Buses", font=("Arial", 12, "bold"), command=search_buses).pack(pady=10)
+    tk.Button(find_window, text="Search Buses", font=("Arial", 12, "bold"), 
+              command=search_buses).pack(pady=10)
 
     def display_buses(buses, travel_date):
-        bus_window = tk.Toplevel(root)
+        bus_window = tk.Toplevel(find_window)
         bus_window.title("Available Buses")
         bus_window.geometry("800x500")
 
@@ -397,31 +568,136 @@ def find_bus_page():
                 messagebox.showerror            
     # tk.Button(root, text="Search Buses", font=("Arial", 14, "bold"), command=search_buses, bg="blue", fg="white").pack(pady=20)
 
-    root.mainloop()
+    return find_window  # Return the window object
          
+
+def admin_login():
+    login_window = tk.Toplevel()
+    login_window.title("Admin Login")
+    login_window.geometry("400x300")
+    login_window.configure(bg="#f0f0f0")
+
+    # Center the window
+    login_window.update_idletasks()
+    width = login_window.winfo_width()
+    height = login_window.winfo_height()
+    x = (login_window.winfo_screenwidth() // 2) - (width // 2)
+    y = (login_window.winfo_screenheight() // 2) - (height // 2)
+    login_window.geometry(f'{width}x{height}+{x}+{y}')
+
+    # Heading
+    tk.Label(login_window, text="Admin Login", font=("Arial", 20, "bold"), 
+            fg="white", bg="#333333", padx=20, pady=10).pack(fill="x", pady=(0, 20))
+
+    # Login form frame
+    form_frame = tk.Frame(login_window, bg="#f0f0f0")
+    form_frame.pack(pady=20, padx=40)
+
+    # Username
+    tk.Label(form_frame, text="Username:", font=("Arial", 12), bg="#f0f0f0").pack(anchor="w")
+    username_entry = tk.Entry(form_frame, font=("Arial", 12), width=30)
+    username_entry.pack(pady=(0, 15))
+
+    # Password
+    tk.Label(form_frame, text="Password:", font=("Arial", 12), bg="#f0f0f0").pack(anchor="w")
+    password_entry = tk.Entry(form_frame, font=("Arial", 12), width=30, show="*")
+    password_entry.pack(pady=(0, 20))
+
+    def validate_login():
+        # You can change these credentials or store them more securely
+        ADMIN_USERNAME = "admin"
+        ADMIN_PASSWORD = "admin123"
+
+        username = username_entry.get().strip()
+        password = password_entry.get().strip()
+
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            login_window.destroy()
+            admin_gui()
+        else:
+            messagebox.showerror("Error", "Invalid username or password!", parent=login_window)
+
+    # Login button
+    tk.Button(form_frame, text="Login", font=("Arial", 12, "bold"), 
+              bg="#4CAF50", fg="white", width=20,
+              command=validate_login).pack(pady=10)
+
+    # Cancel button
+    tk.Button(form_frame, text="Cancel", font=("Arial", 12), 
+              bg="#FF5733", fg="white", width=20,
+              command=login_window.destroy).pack()
 
 def admin_gui():
     admin_window = tk.Toplevel()
     admin_window.title("Admin Panel")
     admin_window.geometry("1550x900")
 
-    tk.Label(admin_window, text="Admin Panel", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
+    # Store references to all admin windows
+    admin_windows = []
+    
+    def open_operator():
+        window = new_operator_gui()
+        admin_windows.append(window)
+    
+    def open_route():
+        window = new_route_gui()
+        admin_windows.append(window)
+    
+    def open_bus():
+        window = new_bus_gui()
+        admin_windows.append(window)
+    
+    def open_run():
+        window = new_run_gui()
+        admin_windows.append(window)
+    
+    def admin_logout():
+        # Close all opened admin windows
+        for window in admin_windows:
+            if window and window.winfo_exists():
+                window.destroy()
+        # Close the main admin panel
+        admin_window.destroy()
+        # Show the main login window again
+        main()
 
-    image = PhotoImage(file="Bus_for_project.png")
-    tk.Label(admin_window, image=image).place(relx=0.5, rely=0.2, anchor='center')
+    # Configure main window
+    screen_width = admin_window.winfo_screenwidth()
+    screen_height = admin_window.winfo_screenheight()
+    admin_window.geometry(f"{screen_width}x{screen_height}")
+    admin_window.configure(bg="#F0F0F0")
 
-    # Buttons with updated positions
-    tk.Button(admin_window, text="New Operator", font=("Arial", 14), bg="#4CAF50", fg="white", command=new_operator_gui).place(relx=0.2, rely=0.5, anchor='center')
-    tk.Button(admin_window, text="New Route", font=("Arial", 14), bg="#FF9800", fg="white", command=new_route_gui).place(relx=0.4, rely=0.5, anchor='center')
-    tk.Button(admin_window, text="New Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=new_bus_gui).place(relx=0.6, rely=0.5, anchor='center')
-    tk.Button(admin_window, text="New Run", font=("Arial", 14), bg="#FF5722", fg="white", command=new_run_gui).place(relx=0.8, rely=0.5, anchor='center')
+    # Header
+    tk.Label(admin_window, text="Admin Panel", font=("Arial", 20, "bold"), 
+            fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
 
-    # Close button
-    tk.Button(admin_window, text="Close", font=("Arial", 14), bg="#FF5733", fg="white", command=admin_window.destroy).place(relx=0.5, rely=0.7, anchor='center')
+    # Try to load and display the image
+    try:
+        image = PhotoImage(file="Bus_for_project.png")
+        image_label = tk.Label(admin_window, image=image, bg="#F0F0F0")
+        image_label.image = image  # Keep a reference
+        image_label.pack(pady=20)
+    except Exception as e:
+        # If image fails to load, just skip it
+        pass
+
+    # Button frame
+    button_frame = tk.Frame(admin_window, bg="#F0F0F0")
+    button_frame.pack(expand=True)
+    
+    # Admin buttons with consistent styling
+    tk.Button(button_frame, text="New Operator", font=("Arial", 14), 
+              bg="#4CAF50", fg="white", command=open_operator).pack(pady=10)
+    tk.Button(button_frame, text="New Route", font=("Arial", 14), 
+              bg="#FF9800", fg="white", command=open_route).pack(pady=10)
+    tk.Button(button_frame, text="New Bus", font=("Arial", 14), 
+              bg="#2196F3", fg="white", command=open_bus).pack(pady=10)
+    tk.Button(button_frame, text="New Run", font=("Arial", 14), 
+              bg="#FF5722", fg="white", command=open_run).pack(pady=10)
+    tk.Button(button_frame, text="Logout", font=("Arial", 14), 
+              bg="#F44336", fg="white", command=admin_logout).pack(pady=10)
 
     admin_window.mainloop()
-
-
 
 def new_operator_gui():
     operator_window = tk.Toplevel()
@@ -532,6 +808,7 @@ def new_operator_gui():
             entry.delete(0, tk.END)
 
     operator_window.mainloop()
+    return operator_window
 
 def new_bus_gui():
     bus_window = tk.Toplevel()
@@ -731,7 +1008,7 @@ def new_bus_gui():
 
         scroll_y = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscroll=scroll_y.set)
-        scroll_y.grid(row=0, column=1, sticky="ns")
+        scroll_y.pack(side="right", fill="y")
         
         tree.grid(row=0, column=0, sticky="nsew")
 
@@ -753,6 +1030,8 @@ def new_bus_gui():
         tk.Button(show_window, text="Close", font=("Arial", 12), bg="#FF5733", fg="white", command=show_window.destroy).grid(row=2, column=0, columnspan=2, pady=10)
 
     tk.Button(bus_window, text="Show All Buses", font=("Arial", 12), command=show_all_buses).grid(row=3, column=0, columnspan=2, pady=10)
+
+    return bus_window
 
 def new_route_gui():
     route_window = tk.Toplevel()
@@ -934,6 +1213,8 @@ def new_route_gui():
     # Close Button
     tk.Button(button_frame, text="Close", font=("Arial", 12), bg="#FF5733", fg="white",
               command=route_window.destroy, width=12, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
+
+    return route_window
 
 def new_run_gui():
     run_window = tk.Toplevel()
@@ -1122,37 +1403,347 @@ def new_run_gui():
     tk.Button(button_frame, text="Close", font=("Arial", 12, "bold"), bg="#FF5733", fg="white",
               command=run_window.destroy, width=15, relief="raised", bd=2).grid(row=1, column=1, padx=10, pady=10)
 
+    return run_window
+
 def main():
     root = tk.Tk()
     root.title("Bus Reservation System")
+    root.withdraw()  # Hide the main window initially
 
-    # Get screen width and height, and set window size accordingly
+    def on_login_success():
+        root.deiconify()  # Show the main window after successful login
+        show_user_panel()
+
+    # Show login/register window first
+    login_window = tk.Toplevel()
+    login_window.title("User Login/Register")
+    login_window.geometry("400x500")
+    login_window.configure(bg="#f0f0f0")
+    login_window.protocol("WM_DELETE_WINDOW", root.quit)
+
+    # Center the window
+    login_window.update_idletasks()
+    width = login_window.winfo_width()
+    height = login_window.winfo_height()
+    x = (login_window.winfo_screenwidth() // 2) - (width // 2)
+    y = (login_window.winfo_screenheight() // 2) - (height // 2)
+    login_window.geometry(f'{width}x{height}+{x}+{y}')
+
+    def show_user_panel():
+        # Store references to user windows
+        user_windows = []
+        
+        def open_check_booking():
+            window = check_booking_gui()
+            user_windows.append(window)
+        
+        def open_find_bus():
+            window = find_bus_page()
+            user_windows.append(window)
+        
+        def user_logout():
+            # Close all opened user windows
+            for window in user_windows:
+                if window and window.winfo_exists():
+                    window.destroy()
+            # Hide main window and return to login
+            root.withdraw()
+            main()
+        
+        # Remove the green header frame and directly show buttons
+        button_frame = tk.Frame(root, bg="#F0F0F0")
+        button_frame.pack(expand=True)
+        
+        tk.Button(button_frame, text="Check Booking", font=("Arial", 14), 
+                bg="#4CAF50", fg="white", command=open_check_booking).pack(pady=10)
+        tk.Button(button_frame, text="Find Bus", font=("Arial", 14), 
+                bg="#FF9800", fg="white", command=open_find_bus).pack(pady=10)
+        tk.Button(button_frame, text="Logout", font=("Arial", 14), 
+                bg="#F44336", fg="white", command=user_logout).pack(pady=10)
+
+    # Configure main window
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    root.geometry(f"{screen_width}x{screen_height}")  # Full screen based on resolution
-
-    tk.Label(text="Bus Booking", font=("Arial", 20, "bold"), fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
-
+    root.geometry(f"{screen_width}x{screen_height}")
     root.configure(bg="#F0F0F0")
 
-    # Image Handling with Error Handling
+    tk.Label(root, text="Bus Booking", font=("Arial", 20, "bold"), 
+            fg="white", bg="#333333", padx=20, pady=10).pack(pady=10, fill="x")
+
+    # Image Handling with Error Handling and Fallback
     try:
         image = PhotoImage(file="Bus_for_project.png")
         image_label = tk.Label(root, image=image, bg="#F0F0F0")
-        image_label.image = image  # Keep reference
-        image_label.place(relx=0.5, rely=0.2, anchor='center')
+        image_label.image = image  # Keep a reference
+        image_label.pack(pady=20)  # Changed from place to pack for better layout
     except Exception as e:
-        print(f"Error loading image: {e}")
+        # If image fails to load, just skip it without creating a fallback frame
+        pass
 
-    # Buttons with new layout
-    tk.Button(root, text="Check Booking", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_booking_gui).place(relx=0.35, rely=0.5, anchor='center')
-    tk.Button(root, text="Find Bus", font=("Arial", 14), bg="#2196F3", fg="white", command=find_bus_page).place(relx=0.5, rely=0.5, anchor='center')
-    tk.Button(root, text="Admin", font=("Arial", 14), bg="#FF9800", fg="white", command=admin_gui).place(relx=0.65, rely=0.5, anchor='center')
+    # Create notebook for tabs
+    notebook = ttk.Notebook(login_window)
+    notebook.pack(pady=10, expand=True)
 
-    # Exit Button
-    tk.Button(root, text="Exit", font=("Arial", 14), bg="#F44336", fg="white", command=root.quit).place(relx=0.5, rely=0.7, anchor='center')
+    # Login tab
+    login_frame = tk.Frame(notebook, bg="#f0f0f0")
+    login_frame.pack(fill="both", expand=True)
+
+    # Register tab
+    register_frame = tk.Frame(notebook, bg="#f0f0f0")
+    register_frame.pack(fill="both", expand=True)
+
+    notebook.add(login_frame, text="Login")
+    notebook.add(register_frame, text="Register")
+
+    # Login Form
+    tk.Label(login_frame, text="User Login", font=("Arial", 16, "bold"), 
+            bg="#f0f0f0").pack(pady=20)
+
+    tk.Label(login_frame, text="Username:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    login_username = tk.Entry(login_frame, font=("Arial", 12), width=30)
+    login_username.pack(pady=(0, 15), padx=50)
+
+    tk.Label(login_frame, text="Password:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    login_password = tk.Entry(login_frame, font=("Arial", 12), width=30, show="*")
+    login_password.pack(pady=(0, 20), padx=50)
+
+    # Register Form
+    tk.Label(register_frame, text="User Registration", font=("Arial", 16, "bold"), 
+            bg="#f0f0f0").pack(pady=20)
+
+    tk.Label(register_frame, text="Username:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_username = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_username.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Password:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_password = tk.Entry(register_frame, font=("Arial", 12), width=30, show="*")
+    reg_password.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Email:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_email = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_email.pack(pady=(0, 10), padx=50)
+
+    tk.Label(register_frame, text="Phone:", font=("Arial", 12), 
+            bg="#f0f0f0").pack(anchor="w", padx=50)
+    reg_phone = tk.Entry(register_frame, font=("Arial", 12), width=30)
+    reg_phone.pack(pady=(0, 20), padx=50)
+
+    def login():
+        username = login_username.get().strip()
+        password = login_password.get().strip()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Please fill all fields!", parent=login_window)
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", 
+                         (username, hash_password(password)))
+            user = cursor.fetchone()
+            conn.close()
+
+            if user:
+                messagebox.showinfo("Success", "Login successful!", parent=login_window)
+                login_window.destroy()
+                on_login_success()
+            else:
+                messagebox.showerror("Error", "Invalid username or password!", parent=login_window)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=login_window)
+
+    def register():
+        username = reg_username.get().strip()
+        password = reg_password.get().strip()
+        email = reg_email.get().strip()
+        phone = reg_phone.get().strip()
+
+        if not all([username, password, email, phone]):
+            messagebox.showerror("Error", "Please fill all fields!", parent=login_window)
+            return
+
+        if len(phone) != 10 or not phone.isdigit():
+            messagebox.showerror("Error", "Phone number must be 10 digits!", parent=login_window)
+            return
+
+        try:
+            conn = sqlite3.connect("bus_reservation.db")
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO users (username, password, email, phone)
+                VALUES (?, ?, ?, ?)
+            ''', (username, hash_password(password), email, phone))
+            conn.commit()
+            conn.close()
+
+            messagebox.showinfo("Success", "Registration successful! Please login.", parent=login_window)
+            notebook.select(0)  # Switch to login tab
+            reg_username.delete(0, tk.END)
+            reg_password.delete(0, tk.END)
+            reg_email.delete(0, tk.END)
+            reg_phone.delete(0, tk.END)
+
+        except sqlite3.IntegrityError:
+            messagebox.showerror("Error", "Username or email already exists!", parent=login_window)
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}", parent=login_window)
+
+    # Login button
+    tk.Button(login_frame, text="Login", font=("Arial", 12, "bold"), 
+              bg="#4CAF50", fg="white", width=20,
+              command=login).pack(pady=10)
+
+    # Register button
+    tk.Button(register_frame, text="Register", font=("Arial", 12, "bold"), 
+              bg="#4CAF50", fg="white", width=20,
+              command=register).pack(pady=10)
+
+    # Admin Login button at the bottom of login window
+    tk.Button(login_window, text="Admin Login", font=("Arial", 12), 
+              bg="#FF5722", fg="white", command=lambda: [login_window.destroy(), admin_login()]).pack(pady=10)
 
     root.mainloop()
 
+# Add Flask routes
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required'}), 400
+    
+    try:
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT user_id, username FROM users WHERE username = ? AND password = ?", 
+            (username, hash_password(password))
+        )
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            token = jwt.encode({
+                'user_id': user[0],
+                'username': user[1],
+                'exp': datetime.utcnow() + timedelta(hours=24)
+            }, app.config['SECRET_KEY'], algorithm='HS256')
+            
+            return jsonify({
+                'message': 'Login successful',
+                'token': token,
+                'username': user[1]
+            }), 200
+        else:
+            return jsonify({'error': 'Invalid username or password'}), 401
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    email = data.get('email')
+    phone = data.get('phone')
+    
+    if not all([username, password, email, phone]):
+        return jsonify({'error': 'All fields are required'}), 400
+    
+    if not phone.isdigit() or len(phone) != 10:
+        return jsonify({'error': 'Phone number must be 10 digits'}), 400
+    
+    try:
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO users (username, password, email, phone)
+            VALUES (?, ?, ?, ?)
+        ''', (username, hash_password(password), email, phone))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Registration successful'}), 201
+        
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username or email already exists'}), 409
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Middleware for protected routes
+def token_required(f):
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        
+        try:
+            token = token.split(' ')[1]  # Remove 'Bearer ' from token
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            current_user = data
+        except jwt.ExpiredSignatureError:
+            return jsonify({'error': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'error': 'Invalid token'}), 401
+            
+        return f(current_user, *args, **kwargs)
+    
+    return decorated
+
+# Example protected route
+@app.route('/api/user/profile', methods=['GET'])
+@token_required
+def get_user_profile(current_user):
+    try:
+        conn = sqlite3.connect("bus_reservation.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT username, email, phone, created_at FROM users WHERE user_id = ?", 
+            (current_user['user_id'],)
+        )
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return jsonify({
+                'username': user[0],
+                'email': user[1],
+                'phone': user[2],
+                'created_at': user[3]
+            }), 200
+        else:
+            return jsonify({'error': 'User not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Modify the main function to run both the Flask app and Tkinter GUI
+def run_server():
+    app.run(debug=True, port=5000)
+
 if __name__ == "__main__":
+    # Initialize database
+    initialize_db()
+    
+    # Start Flask server in a separate thread
+    import threading
+    server_thread = threading.Thread(target=run_server)
+    server_thread.daemon = True  # This ensures the thread will close when the main program exits
+    server_thread.start()
+    
+    # Start Tkinter GUI
     main()

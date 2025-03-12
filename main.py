@@ -98,12 +98,15 @@ def hash_password(password):
     """Hash a password for storing."""
     return hashlib.sha256(str.encode(password)).hexdigest()
 
+def on_login_success():
+    main()
+
 def user_login_register():
     login_window = tk.Toplevel()
     login_window.title("User Login/Register")
     login_window.geometry("400x500")
     login_window.configure(bg="#f0f0f0")
-    login_window.protocol("WM_DELETE_WINDOW", root.quit)  # Handle window close button
+    login_window.protocol("WM_DELETE_WINDOW", login_window.destroy)  # Handle window close button
 
     # Center the window
     login_window.update_idletasks()
@@ -1731,9 +1734,25 @@ def get_user_profile(current_user):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/')
+def index():
+    return "Welcome to the Bus Booking System API"
+
+from flask import send_from_directory
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 # Modify the main function to run both the Flask app and Tkinter GUI
+import platform
+
 def run_server():
-    app.run(debug=True, port=5000)
+    if platform.system() != 'Windows':
+        import signal
+        signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
+    app.run(debug=True, port=5000, use_reloader=False)
 
 if __name__ == "__main__":
     # Initialize database
